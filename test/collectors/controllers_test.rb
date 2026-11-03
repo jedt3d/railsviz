@@ -31,8 +31,31 @@ class ControllersCollectorTest < Minitest::Test
     assert_equal ["show"], filter["only"]
     assert_nil filter["except"]
     assert_equal controller_path, filter["source"]["path"]
-    assert_equal "PatientsController#load_patient", filter["source"]["name"]
+    assert_equal decl_line("patients_controller.rb", "before_action :load_patient, only: %i[show]"), filter["source"]["line"]
+    assert_equal "PatientsController before_action :load_patient", filter["source"]["name"]
     assert filter["doc_url"].end_with?("#method-i-before_action")
+  end
+
+  def admin = result["controllers"].find { |c| c["name"] == "AdminController" }
+  def decl_line(file, text) = File.readlines(RailsVis.root.join("app/controllers", file)).index { |l| l.include?(text) } + 1
+
+  def test_filter_links_to_declaration_even_when_method_is_not_app_code
+    filter = admin["filters"].find { |f| f["name"] == "authenticate_user!" }
+    assert_equal "test/dummy/app/controllers/admin_controller.rb", filter["source"]["path"]
+    assert_equal decl_line("admin_controller.rb", "before_action :authenticate_user!"), filter["source"]["line"]
+    assert_equal "AdminController before_action :authenticate_user!", filter["source"]["name"]
+    assert_equal filter["source"]["line"], admin["filters"].find { |f| f["name"] == "set_locale" }["source"]["line"]
+  end
+
+  def test_inherited_and_concern_filters_link_to_their_declaring_file
+    reports = result["controllers"].find { |c| c["name"] == "Admin::ReportsController" }
+    auth = reports["filters"].find { |f| f["name"] == "authenticate_user!" }
+    assert_equal "test/dummy/app/controllers/admin_controller.rb", auth["source"]["path"]
+    audit = reports["filters"].find { |f| f["name"] == "audit" }
+    assert_equal "after", audit["kind"]
+    assert_equal "test/dummy/app/controllers/concerns/audited.rb", audit["source"]["path"]
+    assert_equal decl_line("concerns/audited.rb", "after_action :audit"), audit["source"]["line"]
+    assert_equal "Audited after_action :audit", audit["source"]["name"]
   end
 
   def test_framework_filters_dropped

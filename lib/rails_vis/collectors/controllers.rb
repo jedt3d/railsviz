@@ -44,7 +44,9 @@ module RailsVis
         raw = callback.filter
         name, source =
           case raw
-          when Symbol then [raw.to_s, (Source.for_method(klass.instance_method(raw), repo: @repo) if klass.method_defined?(raw, true) || klass.private_method_defined?(raw, true))]
+          when Symbol
+            [raw.to_s, declaration(klass, callback.kind, raw) ||
+              (Source.for_method(klass.instance_method(raw), repo: @repo) if klass.method_defined?(raw, true) || klass.private_method_defined?(raw, true))]
           when Proc
             path, line = raw.source_location
             ["(block)", path && Source.node(name: "(block)", path: path, line: line, repo: @repo)]
@@ -62,6 +64,21 @@ module RailsVis
         }
       rescue StandardError => e
         @warnings << Collectors.error("controllers", "#{klass.name} filter #{callback.filter.inspect}", e)
+        nil
+      end
+
+      # The `before_action :name` call site in the nearest app-code ancestor (class or concern) that declares it.
+      # Links the row even when the method lives in a gem (Devise's authenticate_user!).
+      def declaration(klass, kind, filter_name)
+        klass.ancestors.each do |ancestor|
+          next if ancestor.name.nil?
+          node = Source.for_const(ancestor, repo: @repo)
+          next unless node && Source.app_code?(node["path"], repo: @repo)
+          file = Object.const_source_location(ancestor.name)&.first
+          next unless file && File.file?(file)
+          line = BodyScan.callback_line(file, kind.to_s, filter_name.to_s, cache: (@parsed ||= {}))
+          return Source.node(name: "#{ancestor.name} #{kind}_action :#{filter_name}", path: file, line: line, repo: @repo) if line
+        end
         nil
       end
 

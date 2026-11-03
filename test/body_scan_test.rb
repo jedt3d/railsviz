@@ -12,4 +12,13 @@ class BodyScanTest < Minitest::Test
   def test_inertia_literal = assert_equal("Patients/Show", scan(:show).inertia_component)
   def test_inertia_dynamic = assert_equal(:dynamic, scan(:export).inertia_component)
   def test_no_inertia = assert_nil(scan(:index).inertia_component)
+
+  def test_callback_line_finds_declaration
+    path = RailsVis.root.join("app/controllers/admin_controller.rb")
+    line = File.readlines(path).index { |l| l.include?("before_action :authenticate_user!") } + 1
+    assert_equal line, RailsVis::BodyScan.callback_line(path, "before", "authenticate_user!")
+    assert_equal line, RailsVis::BodyScan.callback_line(path, "before", "set_locale")
+    assert_nil RailsVis::BodyScan.callback_line(path, "after", "set_locale")
+    assert_nil RailsVis::BodyScan.callback_line(path, "before", "nope")
+  end
 end

@@ -15,6 +15,27 @@ module RailsVis
       @constants.uniq!
     end
 
+    # Line of the first `before_action :name` (or after/around, prepend_/append_) call in the file, or nil.
+    # Pass a Hash as `cache` to parse each file once across calls.
+    def self.callback_line(path, kind, filter_name, cache: {})
+      pattern = /\A(?:prepend_|append_)?#{kind}_action\z/
+      tree = cache[path.to_s] ||= Prism.parse_file(path.to_s).value
+      find_callback(tree, pattern, filter_name.to_s)&.location&.start_line
+    end
+
+    def self.find_callback(node, pattern, filter_name)
+      if node.is_a?(Prism::CallNode) && node.name.match?(pattern) &&
+         node.arguments&.arguments&.any? { |a| a.is_a?(Prism::SymbolNode) && a.unescaped == filter_name }
+        return node
+      end
+      node.compact_child_nodes.each do |child|
+        found = find_callback(child, pattern, filter_name)
+        return found if found
+      end
+      nil
+    end
+    private_class_method :find_callback
+
     def add_constant(name) = @constants << name
 
     def inertia!(component) = @inertia_component ||= component
