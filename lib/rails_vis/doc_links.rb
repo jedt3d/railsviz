@@ -45,6 +45,22 @@ module RailsVis
       guide("active_record_multiple_databases")
     end
 
+    def active_job
+      guide("active_job_basics")
+    end
+
+    def action_mailer
+      guide("action_mailer_basics")
+    end
+
+    def action_cable
+      guide("action_cable_overview")
+    end
+
+    def rake
+      guide("command_line", anchor: "custom-rake-tasks")
+    end
+
     def gem(name)
       spec = Gem.loaded_specs[name]
       version = spec&.version&.to_s
