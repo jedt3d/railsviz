@@ -1,0 +1,4 @@
+start_here:
+  - docs/overview.md
+  - docs/architecture.md
+  - docs/runbooks/local-setup.md

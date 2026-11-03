@@ -7,8 +7,11 @@ Gem::Specification.new do |spec|
   spec.version = RailsVis::VERSION
   spec.authors = ["Worajedt"]
   spec.summary = "Static onboarding dashboard for Rails 8 apps"
+  spec.license = "MIT"
+  spec.homepage = "https://github.com/jedt3d/railsviz"
+  spec.metadata["source_code_uri"] = spec.homepage
   spec.required_ruby_version = ">= 3.3"
-  spec.files = Dir["lib/**/*.{rb,rake}"] + ["viewer/index.html", "README.md"]
+  spec.files = Dir["lib/**/*.{rb,rake}"] + ["viewer/index.html", "README.md", "LICENSE"]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "rails", ">= 8.0", "< 8.2"

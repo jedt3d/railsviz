@@ -1,31 +1,54 @@
 # RailsVis
 
-TODO: Delete this and the text below, and describe your gem
+RailsVis generates a static onboarding dashboard for a Rails 8 app (8.0 and 8.1; SQLite or PostgreSQL). It boots the app, reflects on routes, controllers, models and databases, reads the project's Markdown documents, and writes `doc/rails_vis/data.json` plus a single-file `doc/rails_vis/index.html`. No running server is needed to view it.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/rails_vis`. To experiment with that code, run `bin/console` for an interactive prompt.
+## Install
 
-## Installation
-
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
-
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+# Gemfile
+group :development do
+  gem "rails_vis"
+end
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+## Use
 
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```sh
+bin/rails rails_vis:dump
 ```
 
-## Usage
+The database must be prepared first (`bin/rails db:prepare`). Open `doc/rails_vis/index.html`, or publish `doc/rails_vis/` to GitHub Pages.
 
-TODO: Write usage instructions here
+## Configuration
 
-## Development
+Optional file `config/rails_vis.yml`. Every key is optional; these are the defaults:
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+| Key          | Default                    | Meaning                                              |
+|--------------|----------------------------|------------------------------------------------------|
+| `docs`       | `["docs/**/*.md"]`         | Globs, relative to the app root, of documents to read |
+| `exclude`    | `["docs/superpowers/**"]`  | Globs removed from `docs`                            |
+| `start_here` | `[]`                       | Ordered document paths; assigns `order` 1..n         |
+| `pages_dir`  | `app/frontend/pages`       | Inertia page root                                    |
+| `repo_url`   | none                       | Overrides the `origin` remote for source links       |
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+## Documents
+
+Documents are the host's existing Markdown files matched by `docs`. Front matter is optional YAML with `title`, `kind`, `audience`, `order` and `related`. Without front matter, `kind` is inferred from the first folder below the docs root:
+
+- `decisions/`: decision
+- `workflows/`, `sequences/`, `ui/`, `domain/`, `security/`: diagram if the file has a Mermaid fence, else reference
+- `research/`: reference
+- files directly in the docs root: overview
+- any other folder: reference
+
+`related` lists file paths, `Class`, or `Class#method` entries; entries that do not resolve are dropped with a warning. `start_here` takes precedence over front matter `order`.
+
+## More
+
+- Design: [docs/superpowers/specs/2026-11-03-rails-onboarding-dashboard-design.md](docs/superpowers/specs/2026-11-03-rails-onboarding-dashboard-design.md)
+- Plan: [docs/superpowers/plans/2026-11-03-rails-vis-first-release.md](docs/superpowers/plans/2026-11-03-rails-vis-first-release.md)
+- Local development: [docs/runbooks/local-setup.md](docs/runbooks/local-setup.md)
+
+## License
+
+MIT. See [LICENSE](LICENSE).
