@@ -3,6 +3,13 @@ name: test
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Acceptance target from acceptance/targets.yml"
+        required: true
+        type: choice
+        options: [spina, lobsters, mastodon]
 
 jobs:
   test:
@@ -40,3 +47,41 @@ jobs:
           RAILS_VIS_DB: postgres
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/rails_vis_test
         run: bundle exec rake test
+
+  acceptance:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: rails_vis_ci
+          POSTGRES_PASSWORD: ci-throwaway-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rails_vis_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    env:
+      # Throwaway values for the CI service above; the acceptance test asserts they never reach data.json.
+      DB_USER: rails_vis_ci
+      DB_PASS: ci-throwaway-password
+      TARGET: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ruby version for target
+        run: ruby -ryaml -e 'puts "TARGET_RUBY=#{YAML.load_file("acceptance/targets.yml").fetch(ARGV[0])["ruby"] || "3.4"}"' "$TARGET" >> "$GITHUB_ENV"
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.TARGET_RUBY }}
+          bundler-cache: false
+      - name: Install libvips
+        run: sudo apt-get update && sudo apt-get install -y libvips-dev
+      - run: bundle install
+      - run: bundle exec rake "acceptance[$TARGET]"

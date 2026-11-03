@@ -3,6 +3,7 @@ test/dummy/tmp/
 test/dummy/storage/
 test/dummy/doc/
 tmp/
+tmp/acceptance/
 pkg/
 .DS_Store
 

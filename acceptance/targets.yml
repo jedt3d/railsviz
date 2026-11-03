@@ -1,0 +1,27 @@
+# Real Rails 8 apps for `rake acceptance[target]`, pinned on 2026-11-03 (default branches on Rails 8.1).
+# `ruby`: the exact Ruby the target's Gemfile demands; on mismatch the run is skipped (exit 2)
+# unless RAILS_VIS_ACCEPTANCE_FORCE=1.
+spina:                      # a small CMS; the whole CMS is an engine mounted at "/" in test/dummy
+  repo: https://github.com/SpinaCMS/Spina
+  sha: 1eb9fa87d4ad559e946df2b1d16c401177233a6a
+  app_dir: test/dummy       # Rails root; the repository root is two levels up, so paths and links must be repo-relative
+  database: sqlite
+  prepare: ["bundle exec rake db:prepare"]
+  floors: { routes: 30, models: 10 }
+lobsters:
+  repo: https://github.com/lobsters/lobsters
+  sha: 49c06ba923b252b0f075894c3a8796d2e1d0af11
+  ruby: "4.0.9"
+  app_dir: .
+  database: sqlite          # four SQLite databases in development: primary, cache, queue, rack_attack
+  prepare: ["cp config/database.yml.sample config/database.yml", "bundle exec rake db:prepare"]
+  floors: { routes: 50, models: 20 }
+mastodon:
+  repo: https://github.com/mastodon/mastodon
+  sha: 77a0b36b54162e7395b7d72261af990309ea9fd8
+  ruby: "4.0.9"
+  app_dir: .
+  database: postgres        # primary plus replica (replica: true) with username/password/host fields
+  prepare: ["bundle exec rake db:prepare"]
+  env: { RAILS_ENV: development, DB_HOST: localhost, REDIS_URL: "redis://localhost:6379/9" }
+  floors: { routes: 300, models: 100 }
