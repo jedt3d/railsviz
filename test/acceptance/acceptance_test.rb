@@ -14,8 +14,8 @@ class AcceptanceTest < Minitest::Test
   DATA = File.join(ROOT, "tmp/acceptance", TARGET, SPEC["app_dir"], "doc/rails_vis/data.json")
   COLLECTORS = %w[routes controllers models databases documents].freeze
 
-  def report = @report ||= JSON.parse(File.read(REPORT))
-  def text = @text ||= File.read(DATA)
+  def report = @report ||= JSON.parse(File.read(REPORT, encoding: "UTF-8"))
+  def text = @text ||= File.read(DATA, encoding: "UTF-8")
   def data = @data ||= JSON.parse(text)
 
   def test_floors
@@ -27,12 +27,13 @@ class AcceptanceTest < Minitest::Test
   def test_no_secrets
     # DB_HOST ("localhost") may legitimately appear elsewhere, so it is checked against databases only.
     databases = JSON.generate(data["databases"])
-    # DB_USER and DB_HOST match as whole words: a common user such as "postgres" is a substring of "postgresql"
-    # (adapter names, README text such as "postgresql@14"). A password is never a legitimate token, so DB_PASS stays a substring check.
+    # All three match as whole words: dev containers commonly use a token such as "postgres" for the user and the password,
+    # and it is a substring of "postgresql" (adapter names, README text such as "postgresql@14"). A whole-word match still
+    # catches a real password embedded as a value; the key assertion below guards the direct path (no password/username/host/url keys).
     word = ->(haystack, value) { haystack.match?(/(?<![A-Za-z0-9_])#{Regexp.escape(value)}(?![A-Za-z0-9_])/) }
-    { "DB_USER" => [text, word], "DB_PASS" => [text, ->(h, v) { h.include?(v) }], "DB_HOST" => [databases, word] }.each do |key, (haystack, match)|
+    { "DB_USER" => text, "DB_PASS" => text, "DB_HOST" => databases }.each do |key, haystack|
       value = (SPEC["env"] || {})[key] || ENV[key]
-      refute match.call(haystack, value), "#{key} value leaked into data.json" if value && !value.empty?
+      refute word.call(haystack, value), "#{key} value leaked into data.json" if value && !value.empty?
     end
     data["databases"].each { |d| assert_empty d.keys & %w[password username host url], d.inspect }
   end

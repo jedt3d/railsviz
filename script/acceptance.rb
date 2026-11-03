@@ -38,7 +38,7 @@ unless head == target["sha"]
 end
 
 gemfile = File.join(clone, "Gemfile")
-lines = File.readlines(gemfile)
+lines = File.readlines(gemfile, encoding: "UTF-8")
 unless lines.any? { |l| l.match?(/^\s*gem ["']rails_vis["']/) }
   entry = %(  gem "rails_vis", path: "#{ROOT}"\n)
   at = lines.index { |l| l.match?(/^group\b.*:development\b.*\bdo\s*$/) }
@@ -51,7 +51,7 @@ sh("bundle install", "bundle install", dir: clone)
 target["prepare"].each { |cmd| sh("prepare", cmd, dir: app, env: env) }
 sh("dump", "bundle exec rake rails_vis:dump", dir: app, env: env)
 
-data = JSON.parse(File.read(File.join(app, "doc/rails_vis/data.json")))
+data = JSON.parse(File.read(File.join(app, "doc/rails_vis/data.json"), encoding: "UTF-8"))
 
 def get(url)
   uri = URI(url)
@@ -69,7 +69,7 @@ links = actions.map do |s|
   action = s["name"].split("#").last
   status = get(s["url"]).code.to_i
   raw = get("https://raw.githubusercontent.com/#{repo["owner"]}/#{repo["repo"]}/#{repo["sha"]}/#{s["path"]}")
-  line = raw.code == "200" ? raw.body.lines[s["line"] - 1].to_s.strip : nil
+  line = raw.code == "200" ? raw.body.dup.force_encoding("UTF-8").lines[s["line"] - 1].to_s.strip : nil
   ok = status == 200 && line.to_s.match?(/\bdef #{Regexp.escape(action)}(?![\w?!=])/)
   puts "[link] #{ok ? "ok  " : "FAIL"} #{s["url"]} -> #{line.inspect}"
   { "url" => s["url"], "status" => status, "line" => line, "ok" => ok }
