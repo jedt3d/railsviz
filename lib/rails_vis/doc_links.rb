@@ -22,8 +22,11 @@ module RailsVis
       api("ActiveRecord::Associations::ClassMethods", macro)
     end
 
+    ACTIVE_RECORD_VALIDATIONS = %w[uniqueness associated].freeze
+
     def validation(kind)
-      api("ActiveModel::Validations::HelperMethods", "validates_#{kind}_of")
+      mod = ACTIVE_RECORD_VALIDATIONS.include?(kind.to_s) ? "ActiveRecord::Validations::ClassMethods" : "ActiveModel::Validations::HelperMethods"
+      api(mod, "validates_#{kind}_of")
     end
 
     def model_callback

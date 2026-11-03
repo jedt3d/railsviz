@@ -28,6 +28,10 @@ class DocLinksTest < Minitest::Test
     assert D.multiple_databases.end_with?("/active_record_multiple_databases.html")
   end
 
+  def test_validation_uniqueness_is_active_record
+    assert_includes D.validation(:uniqueness), "ActiveRecord/Validations/ClassMethods.html#method-i-validates_uniqueness_of"
+  end
+
   def test_gem_links_for_rails
     links = D.gem("rails")
     assert_equal "https://rubygems.org/gems/rails/versions/#{Rails.version}", links[:rubygems]
