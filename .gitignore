@@ -1,0 +1,7 @@
+test/dummy/log/
+test/dummy/tmp/
+test/dummy/storage/
+test/dummy/doc/
+tmp/
+pkg/
+.DS_Store
