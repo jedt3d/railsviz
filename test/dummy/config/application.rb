@@ -40,5 +40,8 @@ module Dummy
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    # Moves Active Storage's gem-drawn routes outside /rails/, as Spina's dummy does.
+    config.active_storage.routes_prefix = "/files"
   end
 end

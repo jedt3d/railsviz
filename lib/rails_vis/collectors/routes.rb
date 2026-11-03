@@ -21,7 +21,7 @@ module RailsVis
         routes.flat_map do |route|
           path = prefix.chomp("/") + route.path.spec.to_s.delete_suffix("(.:format)")
           # route.internal covers /cable etc.; framework engines (Active Storage, Action Mailbox) draw /rails/... without the flag.
-          next [] if route.internal || path.start_with?("/rails/")
+          next [] if route.internal || path.start_with?("/rails/") || gem_drawn?(route)
           app = route.app
           app = app.app if app.is_a?(ActionDispatch::Routing::Mapper::Constraints)
           next collect(app.routes.routes, prefix: path, engine: app.name) if app.is_a?(Class) && app < Rails::Engine
@@ -30,6 +30,14 @@ module RailsVis
           add_warning("#{path || route.inspect}: #{e.class}: #{e.message}")
           []
         end
+      end
+
+      # Drawn by a gem's routes file (turbo-rails, Active Storage under a custom routes_prefix): not app code.
+      # The backtrace cleaner turns gem paths into "turbo-rails (2.x) config/routes.rb:5"; no location at all is kept.
+      def gem_drawn?(route)
+        file = route.source_location.to_s.rpartition(":").first
+        return false if file.empty?
+        !File.absolute_path?(file) || !Source.app_code?(file, repo: @repo)
       end
 
       def row(route, path, engine)
