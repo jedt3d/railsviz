@@ -117,7 +117,7 @@ module RailsVis
       end
 
       def add_warning(message)
-        @warnings << { "where" => "controllers", "message" => message }
+        @warnings << Collectors.warning("controllers", message)
       end
     end
   end
