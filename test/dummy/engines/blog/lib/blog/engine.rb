@@ -3,4 +3,3 @@ module Blog
     isolate_namespace Blog
   end
 end
-Blog::Engine.routes.draw { get "/posts", to: "posts#index" }

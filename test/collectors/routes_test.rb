@@ -36,4 +36,11 @@ class RoutesCollectorTest < Minitest::Test
     assert_equal "Blog::Engine", route["engine"]
     assert routes.none? { |r| r["path"] == "/blog" && r["action"].nil? }
   end
+
+  def test_engine_route_source
+    route = find("/blog/posts")
+    assert_equal "test/dummy/engines/blog/config/routes.rb", route["source"]["path"]
+    assert_equal 2, route["source"]["line"]
+    assert result["warnings"].none? { |w| w["message"].include?("/blog/posts") }
+  end
 end

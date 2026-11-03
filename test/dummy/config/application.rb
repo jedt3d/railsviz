@@ -18,6 +18,7 @@ require "action_cable/engine"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 require "rails_vis"
+require_relative "../engines/blog/lib/blog/engine"
 
 module Dummy
   class Application < Rails::Application
