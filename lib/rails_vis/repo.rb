@@ -19,7 +19,8 @@ module RailsVis
       @root = top ? Pathname.new(top) : given
       if top
         @sha = git(@root, "rev-parse", "HEAD")
-        @dirty = !git(@root, "status", "--porcelain").to_s.empty?
+        # The dump writes doc/rails_vis/; that alone must not mark the tree dirty.
+        @dirty = !git(@root, "status", "--porcelain", "--", ".", ":!doc/rails_vis").to_s.empty?
         @warnings << "working tree is dirty; source links point at the last commit, not your edits" if @dirty
         @owner, @repo = parse(repo_url || git(@root, "remote", "get-url", "origin"))
         @warnings << "no GitHub origin found; source links disabled" unless @owner

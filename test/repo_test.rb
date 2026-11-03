@@ -80,6 +80,18 @@ class RepoTest < Minitest::Test
     end
   end
 
+  # The dump's own output does not make the tree dirty; any other untracked file does.
+  def test_dump_output_not_dirty
+    Dir.mktmpdir do |dir|
+      make_repo(dir, origin: "git@github.com:acme/app.git")
+      FileUtils.mkdir_p("#{dir}/doc/rails_vis")
+      File.write("#{dir}/doc/rails_vis/data.json", "{}")
+      refute RailsVis::Repo.detect(dir).dirty?
+      File.write("#{dir}/stray.txt", "x")
+      assert RailsVis::Repo.detect(dir).dirty?
+    end
+  end
+
   def test_no_git_repo
     Dir.mktmpdir do |dir|
       r = RailsVis::Repo.detect(dir)

@@ -17,7 +17,7 @@ end
 bin/rails rails_vis:dump
 ```
 
-The database must be prepared first (`bin/rails db:prepare`). Open `doc/rails_vis/index.html`, or publish `doc/rails_vis/` to GitHub Pages.
+The database must be prepared first (`bin/rails db:prepare`). Open `doc/rails_vis/index.html`, or publish `doc/rails_vis/` to GitHub Pages. Commit `doc/rails_vis/` or add it to `.gitignore`; either way it does not mark the working tree dirty, but any other uncommitted change does, and then source links point at the last commit.
 
 ## Configuration
 
