@@ -31,6 +31,12 @@ class DatabasesCollectorTest < Minitest::Test
     assert_equal "db/cache_migrate", cache["migrations_paths"]
   end
 
+  def test_replica
+    replica = entry("production", "replica")
+    assert_equal true, replica["replica"]
+    assert_nil replica["solid_component"]
+  end
+
   def test_models_attached
     assert_includes entry("test", "primary")["models"], "Patient"
   end
