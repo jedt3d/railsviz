@@ -17,6 +17,7 @@ class DatabasesCollectorTest < Minitest::Test
     assert_includes pairs, %w[test primary]
     assert_includes pairs, %w[production cache]
     assert_includes pairs, %w[production queue]
+    refute(result["databases"].any? { |d| d["env"] == "default" })
     assert_equal false, entry("test", "primary")["replica"]
   end
 

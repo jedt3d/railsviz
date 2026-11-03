@@ -12,7 +12,8 @@ module RailsVis
 
       def call
         @warnings = []
-        configs = ActiveRecord::Base.configurations.configs_for(include_hidden: true)
+        # The `default: &default` YAML anchor parses as an env; it is not one.
+        configs = ActiveRecord::Base.configurations.configs_for(include_hidden: true).reject { |c| c.env_name == "default" }
         databases = configs.filter_map do |config|
           entry(config)
         rescue StandardError => e
