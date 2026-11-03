@@ -17,8 +17,13 @@ development:
 # re-generated from your development database when you run "rake".
 # Do not set this db to the same as development or production.
 test:
+<% if ENV["RAILS_VIS_DB"] == "postgres" %>
+  adapter: postgresql
+  url: <%= ENV["DATABASE_URL"] %>
+<% else %>
   <<: *default
   database: storage/test.sqlite3
+<% end %>
 
 # SQLite3 write its data on the local filesystem, as such it requires
 # persistent disks. If you are deploying to a managed service, you should

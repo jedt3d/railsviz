@@ -21,6 +21,6 @@ class SourceTest < Minitest::Test
 
   def test_app_code
     assert RailsVis::Source.app_code?(RailsVis.root.join("app/controllers/patients_controller.rb").to_s, repo: repo)
-    refute RailsVis::Source.app_code?(ActionController::Base.instance_method(:render).source_location.first, repo: repo)
+    refute RailsVis::Source.app_code?(File.join(RbConfig::CONFIG["rubylibdir"], "set.rb"), repo: repo)
   end
 end
