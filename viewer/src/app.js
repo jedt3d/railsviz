@@ -239,8 +239,10 @@
     ];
   }
 
-  const controllerClass = (c) =>
-    c.split("/").map((seg) => seg.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("")).join("::") + "Controller";
+  // Route key for a controller class, the inverse of Rails routing: API::V1::UsersController -> api/v1/users.
+  // Derived from the class name (not by camelizing the route) so custom acronym inflections still match.
+  const routeKey = (name) => name.replace(/Controller$/, "").replace(/::/g, "/")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2").replace(/([a-z\d])([A-Z])/g, "$1_$2").toLowerCase();
 
   function filterApplies(f, action) {
     return (!f.only || f.only.includes(action)) && (!f.except || !f.except.includes(action));
@@ -280,10 +282,11 @@
       groups.get(key).push(r);
     }
     const out = [pageHeader("Request map", "Every route, grouped by controller. Select a row to see filters, models, view and sources.")];
+    const byKey = new Map(controllers.map((c) => [routeKey(c.name), c]));
     let shown = 0;
     for (const [key, rs] of groups) {
-      const className = groupClassName(key);
-      const ctrl = controllers.find((c) => c.name === className);
+      const ctrl = byKey.get(key);
+      const className = ctrl ? ctrl.name : key; // missing controller: show the route key; the warning names the class
       const visible = rs.filter((r) => matches(className, key, r.path, r.action, r.name));
       if (!visible.length) continue;
       shown += visible.length;
@@ -314,7 +317,6 @@
     return out;
   }
 
-  const groupClassName = (key) => key === "(no controller)" ? key : controllerClass(key);
   function engineTag(rs) {
     const engine = rs.find((r) => r.engine);
     return engine ? h("span", { class: "tag" }, engine.engine) : null;
@@ -484,6 +486,13 @@
     toggle.setAttribute("aria-expanded", String(open));
   });
   window.addEventListener("hashchange", () => {
+    // Only #/... hashes are routes. Anything else (the skip link #main, an in-page anchor) keeps the current view.
+    if (!location.hash.startsWith("#/")) {
+      const target = document.getElementById(decodeURIComponent(location.hash.slice(1))) || main;
+      if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+      target.focus();
+      return;
+    }
     sidebar.classList.remove("open");
     toggle.setAttribute("aria-expanded", "false");
     render();
