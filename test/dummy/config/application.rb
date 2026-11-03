@@ -48,5 +48,9 @@ module Dummy
     initializer :dummy_marker do
       config.x.rails_vis_marker = true
     end
+
+    # Rails 8.1 builds the stack with klass.new, so the middleware is passed as a constant, loaded here before autoloading exists.
+    require_relative "../app/middleware/request_stamp"
+    config.middleware.use RequestStamp
   end
 end

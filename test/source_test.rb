@@ -64,4 +64,10 @@ class SourceTest < Minitest::Test
     assert_kind_of String, node["url"]
     assert node["url"].start_with?("https://"), node["url"]
   end
+
+  def test_gem_spec
+    repo = RailsVis::Repo.detect(RailsVis.root)
+    assert_equal "rack", RailsVis::Source.gem_spec(Object.const_source_location("Rack::Sendfile").first, repo: repo).name
+    assert_nil RailsVis::Source.gem_spec(RailsVis.root.join("config/application.rb").to_s, repo: repo)
+  end
 end
