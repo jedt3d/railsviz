@@ -15,6 +15,7 @@ require_relative "rails_vis/collectors/models"
 require_relative "rails_vis/collectors/databases"
 require_relative "rails_vis/collectors/documents"
 require_relative "rails_vis/dump"
+require_relative "rails_vis/check_links"
 
 module RailsVis
   class Error < StandardError; end
