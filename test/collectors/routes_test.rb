@@ -53,4 +53,14 @@ class RoutesCollectorTest < Minitest::Test
     assert_equal 2, route["source"]["line"]
     assert result["warnings"].none? { |w| w["message"].include?("/blog/posts") }
   end
+
+  def test_redirect_routes_carry_target
+    assert_equal({ "status" => 301, "to" => "/patients" }, find("/old-patients")["redirect"])
+    assert_nil find("/old-patients")["controller"]
+    assert_equal "test/dummy/config/routes.rb", find("/old-patients")["source"]["path"]
+    assert_equal({ "status" => 301, "to" => nil }, find("/legacy/:id")["redirect"])
+    assert_equal({ "status" => 301, "to" => nil }, find("/elsewhere")["redirect"])
+    assert_nil find("/health")["redirect"]
+    assert result["warnings"].none? { |w| w["message"].include?("old-patients") }, result["warnings"].inspect
+  end
 end

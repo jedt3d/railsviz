@@ -266,14 +266,14 @@
         h("div", {}, label("Models referenced"), action && action.models && action.models.length
           ? h("ul", { class: "plain" }, action.models.map((m) => h("li", {}, modelLink(m))))
           : empty("none detected")),
-        h("div", {}, label("View"), action && action.view
+        h("div", {}, label("View"), route.redirect ? empty("redirect") : action && action.view
           ? h("span", {}, h("span", { class: "tag" }, action.view.kind), " ",
               codeLink({ name: action.view.path, path: action.view.path, url: action.view.url }))
           : empty("not resolved")),
         h("div", {}, label("Source"), h("ul", { class: "plain" },
           h("li", {}, "route ", codeLink(route.source)),
-          action ? h("li", {}, "action ", codeLink(action.source)) : null,
-          ctrl ? h("li", {}, "controller ", codeLink(ctrl.source)) : null)),
+          !route.redirect && action ? h("li", {}, "action ", codeLink(action.source)) : null,
+          !route.redirect && ctrl ? h("li", {}, "controller ", codeLink(ctrl.source)) : null)),
         h("div", {}, label("Docs"), h("ul", { class: "plain" },
           docs.map((d) => h("li", {}, h("a", { href: docHref(d) }, d.title || d.path))),
           h("li", {}, ext(route.doc_url, "Rails routing guide"))))));
@@ -282,7 +282,7 @@
   function renderRequests() {
     const groups = new Map();
     for (const r of routes) {
-      const key = r.controller || "(no controller)";
+      const key = r.redirect ? "(redirects)" : (r.controller || "(no controller)");
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(r);
     }
@@ -304,7 +304,9 @@
         const detail = h("tr", { class: "detail-row", id, hidden: true }, h("td", { colspan: "5" }, routeDetail(r, ctrl, action, notes)));
         const btn = h("button", { type: "button", class: "row-toggle", "aria-expanded": "false", "aria-controls": id,
           onclick: () => { const open = detail.hidden; detail.hidden = !open; btn.setAttribute("aria-expanded", String(open)); } },
-          h("span", { class: "chev", "aria-hidden": "true" }, "▸"), " ", r.action || "?");
+          h("span", { class: "chev", "aria-hidden": "true" }, "▸"), " ", r.redirect
+            ? [h("span", { class: "tag" }, "redirect " + r.redirect.status), " → ", h("code", {}, r.redirect.to || "(computed)")]
+            : (r.action || "?"));
         return [h("tr", { class: notes.length ? "has-warn" : "" },
           h("td", {}, btn),
           h("td", {}, h("span", { class: "verb" }, r.verb || "")),

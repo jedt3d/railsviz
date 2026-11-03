@@ -43,9 +43,23 @@ module RailsVis
           "controller" => route.defaults[:controller],
           "action" => route.defaults[:action],
           "engine" => engine,
+          "redirect" => redirect(route),
           "source" => source(route, path),
           "doc_url" => DocLinks.routing
         }
+      end
+
+      # { "status", "to" } for `to: redirect(...)` endpoints (through any Constraints wrappers), else nil.
+      def redirect(route)
+        app = route.app
+        app = app.app while app.is_a?(ActionDispatch::Routing::Mapper::Constraints)
+        return nil unless app.is_a?(ActionDispatch::Routing::Redirect)
+
+        to = case app.block
+             when String then app.block
+             when Hash then app.block[:path]
+             end
+        { "status" => app.status, "to" => to }
       end
 
       def source(route, path)
