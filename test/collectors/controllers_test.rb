@@ -26,10 +26,8 @@ class ControllersCollectorTest < Minitest::Test
   end
 
   def test_filters
-    filters = patients["filters"].select { |f| f["name"] == "load_patient" }
-    assert_equal 1, filters.size
-    filter = filters.first
-    assert_equal "before", filter["kind"]
+    assert_equal [%w[before load_patient]], patients["filters"].map { |f| [f["kind"], f["name"]] }
+    filter = patients["filters"].first
     assert_equal ["show"], filter["only"]
     assert_nil filter["except"]
     assert_equal controller_path, filter["source"]["path"]
@@ -37,11 +35,17 @@ class ControllersCollectorTest < Minitest::Test
     assert filter["doc_url"].end_with?("#method-i-before_action")
   end
 
-  def test_block_filter_inherited_from_allow_browser
-    filter = patients["filters"].find { |f| f["name"] == "(block)" && f["source"]["path"].end_with?("action_controller/metal/allow_browser.rb") }
-    assert_equal "before", filter["kind"]
-    assert_nil filter["only"]
-    assert_nil filter["except"]
+  def test_framework_filters_dropped
+    application = result["controllers"].find { |c| c["name"] == "ApplicationController" }
+    assert_equal [], application["filters"]
+  end
+
+  def test_failing_action_warns_and_keeps_controller
+    broken = result["controllers"].find { |c| c["name"] == "BrokenController" }
+    assert_equal %w[ghost index], broken["actions"].map { |a| a["name"] }.sort
+    ghost = broken["actions"].find { |a| a["name"] == "ghost" }
+    assert_equal({ "name" => "ghost", "source" => nil, "models" => [], "view" => nil }, ghost)
+    assert result["warnings"].any? { |w| w["message"].start_with?("BrokenController#ghost: NameError") }
   end
 
   def test_models_referenced

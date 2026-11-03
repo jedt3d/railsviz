@@ -35,7 +35,7 @@ module RailsVis
           "name" => klass.name,
           "parent" => klass.superclass.name,
           "source" => source,
-          "filters" => klass._process_action_callbacks.map { |cb| filter(klass, cb) },
+          "filters" => klass._process_action_callbacks.filter_map { |cb| filter(klass, cb) },
           "actions" => klass.action_methods.sort.map { |name| action(klass, name) }
         }
       end
@@ -50,6 +50,8 @@ module RailsVis
             ["(block)", path && Source.node(name: "(block)", path: path, line: line, repo: @repo)]
           else [raw.class.name, nil]
           end
+        # Inherited framework callbacks (CSRF, gem-defined blocks) are noise for onboarding; keep app-defined ones only.
+        return unless source && Source.app_code?(source["path"], repo: @repo)
         {
           "kind" => callback.kind.to_s,
           "name" => name,
@@ -58,6 +60,9 @@ module RailsVis
           "source" => source,
           "doc_url" => DocLinks.controller_filter(callback.kind)
         }
+      rescue StandardError => e
+        add_warning("#{klass.name} filter #{callback.filter.inspect}: #{e.class}: #{e.message}")
+        nil
       end
 
       # Rails rewrites only:/except: into an ActionFilter inside the callback's :if/:unless list.
@@ -69,15 +74,19 @@ module RailsVis
       end
 
       def action(klass, name)
+        row = { "name" => name, "source" => nil, "models" => [], "view" => nil }
         method = klass.instance_method(name)
         path, line = method.source_location
-        row = { "name" => name, "source" => Source.for_method(method, repo: @repo), "models" => [], "view" => nil }
+        row["source"] = Source.for_method(method, repo: @repo)
         unless path && File.file?(path)
           add_warning("#{klass.name}##{name}: source file not readable (#{path.inspect}); models and view skipped")
           return row
         end
         scan = BodyScan.new(path, name, line)
         row.merge("models" => scan.constants & @model_names, "view" => view(klass, name, scan.inertia_component))
+      rescue StandardError => e
+        add_warning("#{klass.name}##{name}: #{e.class}: #{e.message}")
+        row
       end
 
       def view(klass, name, component)
