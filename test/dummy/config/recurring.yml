@@ -1,0 +1,10 @@
+# Fixture for rails_vis: Solid Queue recurring tasks (args are never collected).
+production:
+  nightly_report:
+    class: WelcomeJob
+    queue: background
+    args: [1, { secret: "recurring-arg-sentinel" }]
+    schedule: every day at 2am
+  cleanup:
+    command: "Patient.where(name: nil).delete_all"
+    schedule: every hour

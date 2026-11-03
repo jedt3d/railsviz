@@ -30,6 +30,10 @@ class DocLinksTest < Minitest::Test
     assert D.model_callback.end_with?("/active_record_callbacks.html")
     assert D.routing.end_with?("/routing.html")
     assert D.multiple_databases.end_with?("/active_record_multiple_databases.html")
+    assert D.active_job.end_with?("/active_job_basics.html")
+    assert D.action_mailer.end_with?("/action_mailer_basics.html")
+    assert D.action_cable.end_with?("/action_cable_overview.html")
+    assert D.rake.end_with?("/command_line.html#custom-rake-tasks")
   end
 
   def test_validation_uniqueness_is_active_record
