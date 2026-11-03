@@ -18,11 +18,14 @@ class RoutesCollectorTest < Minitest::Test
     assert routes.none? { |r| r["path"].start_with?("/rails/") }
   end
 
-  # Active Storage draws under routes_prefix "/files" from its gem routes file: gem code, dropped.
-  def test_gem_drawn_routes_excluded
-    assert routes.none? { |r| r["path"].start_with?("/files/") }, routes.map { |r| r["path"] }.grep(%r{\A/files/}).inspect
-    assert result["warnings"].none? { |w| w["message"].include?("/files/") }
-    refute_nil find("/blog/posts")
+  # Active Storage draws under routes_prefix "/files" from its gem routes file: kept, no app source line.
+  def test_gem_drawn_routes_kept_without_source
+    files = routes.select { |r| r["path"].start_with?("/files/") }
+    refute_empty files
+    assert files.all? { |r| r["source"].nil? }, files.inspect
+    refute_nil find("/blog/posts")["source"]
+    collapsed = result["warnings"].select { |w| w["message"].match?(/\d+ routes drawn by .*active_?storage.*routes\.rb/i) }
+    assert_equal 1, collapsed.size, result["warnings"].inspect
   end
 
   def test_verb_path_controller_action

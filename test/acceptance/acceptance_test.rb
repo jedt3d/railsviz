@@ -48,15 +48,17 @@ class AcceptanceTest < Minitest::Test
     end
   end
 
+  # Gem-drawn routes (turbo-rails, Active Storage under /files) are kept with source nil and no engine.
   def test_spina_routes_are_engine_routes
     skip unless TARGET == "spina"
-    others = data["routes"].reject { |r| r["engine"] == "Spina::Engine" }
+    others = data["routes"].select { |r| r["source"] && r["engine"] != "Spina::Engine" }
     assert_empty others.map { |r| "#{r["verb"]} #{r["path"]} (#{r["engine"].inspect})" }
+    assert_operator data["routes"].count { |r| r["engine"] == "Spina::Engine" }, :>=, 100
   end
 
   def test_spina_route_sources_are_repo_config
     skip unless TARGET == "spina"
-    bad = data["routes"].reject { |r| r["source"]&.fetch("path")&.start_with?("config/") }
+    bad = data["routes"].select { |r| r["source"] && !r["source"]["path"].start_with?("config/") }
     assert_empty bad.map { |r| "#{r["verb"]} #{r["path"]}: #{r["source"].inspect}" }
   end
 

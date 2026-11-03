@@ -10,9 +10,12 @@ module RailsVis
 
       def call
         @warnings = []
+        @gem_drawn = Hash.new(0)
         ActionDispatch::Routing::Mapper.route_source_locations = true
         Rails.application.reload_routes!
-        { "routes" => collect(Rails.application.routes.routes, prefix: "", engine: nil), "warnings" => @warnings }
+        routes = collect(Rails.application.routes.routes, prefix: "", engine: nil)
+        @gem_drawn.each { |file, n| add_warning("#{n} route#{"s" unless n == 1} drawn by #{file} #{n == 1 ? "has" : "have"} no app source line") }
+        { "routes" => routes, "warnings" => @warnings }
       end
 
       private
@@ -21,7 +24,7 @@ module RailsVis
         routes.flat_map do |route|
           path = prefix.chomp("/") + route.path.spec.to_s.delete_suffix("(.:format)")
           # route.internal covers /cable etc.; framework engines (Active Storage, Action Mailbox) draw /rails/... without the flag.
-          next [] if route.internal || path.start_with?("/rails/") || gem_drawn?(route)
+          next [] if route.internal || path.start_with?("/rails/")
           app = route.app
           app = app.app if app.is_a?(ActionDispatch::Routing::Mapper::Constraints)
           next collect(app.routes.routes, prefix: path, engine: app.name) if app.is_a?(Class) && app < Rails::Engine
@@ -30,14 +33,6 @@ module RailsVis
           add_warning("#{path || route.inspect}: #{e.class}: #{e.message}")
           []
         end
-      end
-
-      # Drawn by a gem's routes file (turbo-rails, Active Storage under a custom routes_prefix): not app code.
-      # The backtrace cleaner turns gem paths into "turbo-rails (2.x) config/routes.rb:5"; no location at all is kept.
-      def gem_drawn?(route)
-        file = route.source_location.to_s.rpartition(":").first
-        return false if file.empty?
-        !File.absolute_path?(file) || !Source.app_code?(file, repo: @repo)
       end
 
       def row(route, path, engine)
@@ -55,9 +50,14 @@ module RailsVis
 
       def source(route, path)
         file, _, line = route.source_location.to_s.rpartition(":")
-        # Gem routes come back backtrace-cleaned ("actionmailbox (8.1.4) config/routes.rb:5"), not a real file path.
-        return Source.node(name: path, path: file, line: line.to_i, repo: @repo) if File.absolute_path?(file)
-        add_warning("#{route.verb} #{path}: no source location (drawn outside a reloadable routes file, or by a gem)")
+        if file.empty?
+          add_warning("#{route.verb} #{path}: no source location (drawn outside a reloadable routes file, or by a gem)")
+          return nil
+        end
+        # Gem routes (turbo-rails, Active Storage under a custom routes_prefix) come back backtrace-cleaned
+        # ("turbo-rails (2.0.16) config/routes.rb:5") or as a gem path: kept, no source, one warning per file.
+        return Source.node(name: path, path: file, line: line.to_i, repo: @repo) if File.absolute_path?(file) && Source.app_code?(file, repo: @repo)
+        @gem_drawn[file] += 1
         nil
       end
 
