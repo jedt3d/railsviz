@@ -13,6 +13,7 @@ module RailsVis
 
     def initialize(root:)
       @root = Pathname.new(root.to_s)
+      RailsVis.root = @root # collectors read the global; keep it equal to the root Config and Repo use
     end
 
     def call

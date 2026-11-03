@@ -5,4 +5,3 @@ require_relative "dummy/config/environment"
 ActiveRecord::Migration.maintain_test_schema!
 require "minitest/autorun"
 
-RailsVis.root = Rails.root

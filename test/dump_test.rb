@@ -50,6 +50,17 @@ class DumpTest < Minitest::Test
     assert_equal data, JSON.parse(embedded)
   end
 
+  # docs/escaping.md contains a literal </script>; unescaped it would close the data tag early.
+  def test_script_close_in_body_is_escaped
+    viewer_closes = File.read(RailsVis::Dump::VIEWER).scan("</script>").size
+    assert_equal viewer_closes + 1, html.scan("</script>").size
+    tag = '<script id="rails-vis-data" type="application/json">'
+    embedded = html[/#{Regexp.escape(tag)}(.*?)<\/script>/m, 1]
+    doc = JSON.parse(embedded)["documents"].find { |d| d["path"].end_with?("docs/escaping.md") }
+    assert_equal RailsVis.root.join("docs/escaping.md").read, doc["body"]
+    assert_includes doc["body"], "</script><b>injected</b>"
+  end
+
   def test_no_secret_leaks
     [json_text, html].each do |text|
       refute_includes text, "secret-should-not-leak"

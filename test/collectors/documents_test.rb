@@ -97,6 +97,6 @@ class DocumentsCollectorTest < Minitest::Test
 
   def test_exclude
     assert result["documents"].none? { |d| d["path"].include?("docs/superpowers/") }
-    assert_equal 4, result["documents"].size
+    assert_equal 5, result["documents"].size
   end
 end
