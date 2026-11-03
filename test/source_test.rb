@@ -32,7 +32,25 @@ class SourceTest < Minitest::Test
     original = Gem.path
     Gem.paths = { "GEM_PATH" => ([probe.to_s] + original).join(File::PATH_SEPARATOR), "GEM_HOME" => Gem.dir }
     refute RailsVis::Source.app_code?(file.to_s, repo: repo)
-    assert RailsVis::Source.app_code?(RailsVis.root.join("test/dummy/app/models/patient.rb").to_s, repo: repo)
+    assert RailsVis::Source.app_code?(RailsVis.root.join("app/models/patient.rb").to_s, repo: repo)
+  ensure
+    Gem.paths = { "GEM_PATH" => original.join(File::PATH_SEPARATOR), "GEM_HOME" => Gem.dir } if original
+    FileUtils.rm_rf(probe)
+  end
+
+  def test_repo_relative_paths_resolve_from_any_working_directory
+    probe = RailsVis.root.join("tmp/vendor_probe")
+    file = probe.join("gems/fake-1.0/lib/fake.rb")
+    FileUtils.mkdir_p(file.dirname)
+    File.write(file, "")
+    original = Gem.path
+    Gem.paths = { "GEM_PATH" => ([probe.to_s] + original).join(File::PATH_SEPARATOR), "GEM_HOME" => Gem.dir }
+    rel_gem = repo.relative(file)
+    rel_app = repo.relative(RailsVis.root.join("app/models/patient.rb"))
+    Dir.chdir(RailsVis.root) do
+      refute RailsVis::Source.app_code?(rel_gem, repo: repo)
+      assert RailsVis::Source.app_code?(rel_app, repo: repo)
+    end
   ensure
     Gem.paths = { "GEM_PATH" => original.join(File::PATH_SEPARATOR), "GEM_HOME" => Gem.dir } if original
     FileUtils.rm_rf(probe)

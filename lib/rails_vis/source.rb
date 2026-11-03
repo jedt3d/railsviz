@@ -10,16 +10,17 @@ module RailsVis
     end
 
     def app_code?(path, repo:)
-      return false if gem_code?(path)
+      return false if gem_code?(path, repo: repo)
       !repo.relative(path).start_with?("..")
     end
 
     # Gem code, even when a vendored bundle (vendor/bundle) sits inside the repo root.
-    def gem_code?(path)
+    def gem_code?(path, repo:)
+      abs = File.expand_path(path.to_s, repo.root.to_s)
       real = begin
-        File.realpath(path.to_s)
+        File.realpath(abs)
       rescue SystemCallError
-        File.expand_path(path.to_s)
+        abs
       end
       gem_roots.any? { |root| real.start_with?(root + File::SEPARATOR) }
     end
