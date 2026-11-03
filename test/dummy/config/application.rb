@@ -43,5 +43,10 @@ module Dummy
 
     # Moves Active Storage's gem-drawn routes outside /rails/, as Spina's dummy does.
     config.active_storage.routes_prefix = "/files"
+
+    # Fixture for rails_vis: an initializer the app itself defines (Boot view lists it with its source line).
+    initializer :dummy_marker do
+      config.x.rails_vis_marker = true
+    end
   end
 end

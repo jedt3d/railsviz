@@ -14,6 +14,10 @@ class DocLinksTest < Minitest::Test
     assert D.api("ActiveRecord::Base", :find_by, kind: :class).end_with?("#method-c-find_by")
   end
 
+  def test_configuring_guide
+    assert_equal "https://guides.rubyonrails.org/v#{Rails.version.split('.')[0, 2].join('.')}/configuring.html", D.configuring
+  end
+
   def test_guide_url
     assert_equal "https://guides.rubyonrails.org/v#{Rails.version.split('.')[0, 2].join('.')}/routing.html", D.guide("routing")
     assert D.guide("routing", anchor: "x").end_with?("routing.html#x")

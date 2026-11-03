@@ -45,6 +45,10 @@ module RailsVis
       guide("active_record_multiple_databases")
     end
 
+    def configuring
+      guide("configuring")
+    end
+
     def gem(name)
       spec = Gem.loaded_specs[name]
       version = spec&.version&.to_s
