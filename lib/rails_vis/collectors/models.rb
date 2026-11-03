@@ -21,7 +21,7 @@ module RailsVis
           end
           model(klass, source)
         rescue StandardError => e
-          add_warning("#{klass.name}: #{e.class}: #{e.message}")
+          @warnings << Collectors.error("models", klass.name, e)
           nil
         end
         { "models" => models, "warnings" => @warnings, "model_names" => models.map { |m| m["name"] } }

@@ -17,7 +17,7 @@ module RailsVis
         databases = configs.filter_map do |config|
           entry(config)
         rescue StandardError => e
-          @warnings << Collectors.warning("databases", "#{config.env_name}/#{config.name}: #{e.class}: #{e.message}")
+          @warnings << Collectors.error("databases", "#{config.env_name}/#{config.name}", e)
           nil
         end
         { "databases" => databases, "warnings" => @warnings }

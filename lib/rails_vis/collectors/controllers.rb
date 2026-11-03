@@ -21,7 +21,7 @@ module RailsVis
           next unless source && Source.app_code?(source["path"], repo: @repo)
           controller(klass, source)
         rescue StandardError => e
-          add_warning("#{klass.name}: #{e.class}: #{e.message}")
+          @warnings << Collectors.error("controllers", klass.name, e)
           nil
         end
         warn_missing_controllers
@@ -61,7 +61,7 @@ module RailsVis
           "doc_url" => DocLinks.controller_filter(callback.kind)
         }
       rescue StandardError => e
-        add_warning("#{klass.name} filter #{callback.filter.inspect}: #{e.class}: #{e.message}")
+        @warnings << Collectors.error("controllers", "#{klass.name} filter #{callback.filter.inspect}", e)
         nil
       end
 
@@ -85,7 +85,7 @@ module RailsVis
         scan = BodyScan.new(path, name, line)
         row.merge("models" => scan.constants & @model_names, "view" => view(klass, name, scan.inertia_component))
       rescue StandardError => e
-        add_warning("#{klass.name}##{name}: #{e.class}: #{e.message}")
+        @warnings << Collectors.error("controllers", "#{klass.name}##{name}", e)
         row
       end
 

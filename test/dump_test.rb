@@ -82,7 +82,7 @@ class DumpTest < Minitest::Test
     dir = RailsVis::Collectors::Routes.stub(:new, boom) { RailsVis::Dump.new(root: RailsVis.root).call }
     result = JSON.parse(dir.join("data.json").read)
     assert_equal [], result["routes"]
-    assert_includes result["warnings"], { "where" => "routes", "message" => "RuntimeError: boom" }
+    assert_includes result["warnings"], { "where" => "routes", "message" => "collector failed: RuntimeError: boom" }
     refute_empty result["models"]
   ensure
     self.class.reset!

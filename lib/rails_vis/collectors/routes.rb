@@ -30,7 +30,7 @@ module RailsVis
           next collect(app.routes.routes, prefix: path, engine: app.name) if app.is_a?(Class) && app < Rails::Engine
           [row(route, path, engine)]
         rescue StandardError => e
-          add_warning("#{path || route.inspect}: #{e.class}: #{e.message}")
+          @warnings << Collectors.error("routes", path || route.inspect, e)
           []
         end
       end

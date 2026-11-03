@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "minitest/mock"
 
 class ModelsCollectorTest < Minitest::Test
   def result
@@ -56,5 +57,29 @@ class ModelsCollectorTest < Minitest::Test
 
   def test_database_role
     assert_equal "primary", patient["database"]
+  end
+
+  # Driver and Active Record messages can name the host and user; only the class is kept.
+  def test_database_error_message_not_leaked
+    err = ActiveRecord::ConnectionNotEstablished.new("There is an issue connecting with your hostname: db.internal, username: admin")
+    messages = warnings_when_raising(err)
+    refute_empty messages
+    messages.each { |m| refute_match(/db\.internal|admin/, m) }
+    assert(messages.all? { |m| m.end_with?(": ActiveRecord::ConnectionNotEstablished") }, messages.inspect)
+  end
+
+  def test_plain_error_message_kept
+    messages = warnings_when_raising(RuntimeError.new("boom"))
+    refute_empty messages
+    assert(messages.all? { |m| m.end_with?(": RuntimeError: boom") }, messages.inspect)
+  end
+
+  private
+
+  def warnings_when_raising(err)
+    r = RailsVis::Source.stub(:for_const, ->(*, **) { raise err }) do
+      RailsVis::Collectors::Models.new(repo: RailsVis::Repo.detect(RailsVis.root)).call
+    end
+    r["warnings"].map { |w| w["message"] }
   end
 end

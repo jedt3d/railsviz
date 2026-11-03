@@ -59,7 +59,7 @@ module RailsVis
       @warnings.concat(result["warnings"] || [])
       result
     rescue StandardError => e
-      @warnings << Collectors.warning(name, "#{e.class}: #{e.message}")
+      @warnings << Collectors.error(name, "collector failed", e)
       { name => [] }
     end
 

@@ -23,7 +23,7 @@ module RailsVis
         documents = files.filter_map do |rel, base|
           document(rel, base)
         rescue StandardError => e
-          add_warning("#{rel}: #{e.class}: #{e.message}")
+          @warnings << Collectors.error("documents", rel, e)
           nil
         end
         { "documents" => documents, "warnings" => @warnings }
