@@ -60,8 +60,8 @@ module RailsVis
         return [] unless file.file?
         text = file.read
         data = YAML.safe_load(ERB.new(text).result, aliases: true)
-        data.flat_map do |env, tasks|
-          tasks.map do |name, task|
+        (data || {}).flat_map do |env, tasks|
+          (tasks || {}).map do |name, task|
             line = text.lines.index { |l| l.start_with?("  #{name}:") }
             { "env" => env, "name" => name, "class" => task["class"], "command" => task["command"],
               "queue" => task["queue"], "schedule" => task["schedule"],

@@ -31,19 +31,25 @@ class EntryPointsCollectorTest < Minitest::Test
     refute_includes JSON.generate(ep), "recurring-arg-sentinel"
   end
 
+  # Runs the public call against a temp app root; returns [recurring rows, recurring warnings].
   def recurring_with(content)
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, "config"))
       File.write(File.join(dir, "config/recurring.yml"), content) if content
       Rails.stub(:root, Pathname.new(dir)) do
-        collector = RailsVis::Collectors::EntryPoints.new(repo: RailsVis::Repo.detect(RailsVis.root))
-        [collector.send(:recurring), collector.instance_variable_get(:@warnings)]
+        out = RailsVis::Collectors::EntryPoints.new(repo: RailsVis::Repo.detect(RailsVis.root)).call
+        [out["entry_points"]["recurring"], out["warnings"].select { |w| w["message"].start_with?("recurring") }]
       end
     end
   end
 
   def test_recurring_absent_is_empty_without_warning
     assert_equal [[], []], recurring_with(nil)
+  end
+
+  def test_recurring_without_tasks_is_empty_without_warning
+    assert_equal [[], []], recurring_with("# only comments\n")
+    assert_equal [[], []], recurring_with("production:\n  # nothing\n")
   end
 
   def test_recurring_malformed_warns_once
