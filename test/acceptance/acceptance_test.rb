@@ -27,9 +27,12 @@ class AcceptanceTest < Minitest::Test
   def test_no_secrets
     # DB_HOST ("localhost") may legitimately appear elsewhere, so it is checked against databases only.
     databases = JSON.generate(data["databases"])
-    { "DB_USER" => text, "DB_PASS" => text, "DB_HOST" => databases }.each do |key, haystack|
+    # DB_USER and DB_HOST match as whole words: a common user such as "postgres" is a substring of "postgresql"
+    # (adapter names, README text such as "postgresql@14"). A password is never a legitimate token, so DB_PASS stays a substring check.
+    word = ->(haystack, value) { haystack.match?(/(?<![A-Za-z0-9_])#{Regexp.escape(value)}(?![A-Za-z0-9_])/) }
+    { "DB_USER" => [text, word], "DB_PASS" => [text, ->(h, v) { h.include?(v) }], "DB_HOST" => [databases, word] }.each do |key, (haystack, match)|
       value = (SPEC["env"] || {})[key] || ENV[key]
-      refute_includes haystack, value, "#{key} value leaked into data.json" if value && !value.empty?
+      refute match.call(haystack, value), "#{key} value leaked into data.json" if value && !value.empty?
     end
     data["databases"].each { |d| assert_empty d.keys & %w[password username host url], d.inspect }
   end
