@@ -46,6 +46,21 @@ class RepoTest < Minitest::Test
     end
   end
 
+  def test_relative_resolves_symlinked_form_of_missing_file
+    Dir.mktmpdir do |dir|
+      make_repo(dir, origin: "git@github.com:acme/app.git")
+      r = RailsVis::Repo.detect("#{dir}/sub/dummy")
+      assert_equal "sub/dummy/config/routes.rb", r.relative("#{dir}/sub/dummy/config/routes.rb")
+    end
+  end
+
+  def test_url_for_outside_root_is_nil
+    Dir.mktmpdir do |dir|
+      make_repo(dir, origin: "git@github.com:acme/app.git")
+      assert_nil RailsVis::Repo.detect(dir).url_for("/etc/hosts", 1)
+    end
+  end
+
   def test_github_https_origin_with_dot_git
     Dir.mktmpdir do |dir|
       make_repo(dir, origin: "https://github.com/acme/app.git")

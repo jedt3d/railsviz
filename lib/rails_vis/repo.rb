@@ -38,11 +38,13 @@ module RailsVis
       p = Pathname.new(path.to_s)
       return p.cleanpath.to_s unless p.absolute?
       rel = p.relative_path_from(root).to_s
-      rel.start_with?("..") && p.exist? ? p.realpath.relative_path_from(root.realpath).to_s : rel
+      rel.start_with?("..") ? resolve(p).relative_path_from(root.realpath).to_s : rel
     end
 
     def url_for(path, line)
-      "#{url_base}/#{relative(path)}#L#{line}" if url_base
+      return unless url_base
+      rel = relative(path)
+      "#{url_base}/#{rel}#L#{line}" unless rel.start_with?("..")
     end
 
     def to_h
@@ -50,6 +52,16 @@ module RailsVis
     end
 
     private
+
+    # realpath of the deepest existing ancestor, plus the non-existent remainder.
+    def resolve(path)
+      tail = []
+      until path.exist?
+        tail.unshift(path.basename)
+        path = path.dirname
+      end
+      tail.reduce(path.realpath) { |acc, name| acc + name }
+    end
 
     # Returns stripped stdout, or nil when git fails (no repo, no origin, no commits).
     def git(dir, *args)
