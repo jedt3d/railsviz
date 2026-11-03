@@ -5134,10 +5134,15 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
 
   // ---------- routing ----------
 
+  // A malformed escape (a stray %) falls back to the raw text instead of throwing.
+  function decode(s) {
+    try { return decodeURIComponent(s); } catch (_) { return s; }
+  }
+
   function render() {
     const raw = location.hash.replace(/^#\/?/, "");
     const [view, ...rest] = raw.split("/");
-    const arg = rest.length ? decodeURIComponent(rest.join("/")) : null;
+    const arg = rest.length ? decode(rest.join("/")) : null;
     let nodes, active = view;
     switch (view) {
       case "requests": nodes = renderRequests(); break;
@@ -5163,9 +5168,10 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
     toggle.setAttribute("aria-expanded", String(open));
   });
   window.addEventListener("hashchange", () => {
-    // Only #/... hashes are routes. Anything else (the skip link #main, an in-page anchor) keeps the current view.
-    if (!location.hash.startsWith("#/")) {
-      const target = document.getElementById(decodeURIComponent(location.hash.slice(1))) || main;
+    // Routes are #/... and the empty hash (Start here, e.g. after Back to the first entry).
+    // Any other hash (the skip link #main, an in-page anchor) keeps the current view and only moves focus.
+    if (location.hash && !location.hash.startsWith("#/")) {
+      const target = document.getElementById(decode(location.hash.slice(1))) || main;
       if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
       target.focus();
       return;
