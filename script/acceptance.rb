@@ -61,10 +61,10 @@ def get(url)
 end
 
 # A link is ok when the blob page answers 200 and the raw file at that SHA has `def <action>` on that line.
-# Inherited actions repeat on every subclass; distinct URLs make ten real checks.
+# Inherited actions repeat on every subclass; distinct URLs make ten real checks. Gem-code nodes (path nil) are skipped.
 repo = data["meta"]["repo"]
 actions = data["controllers"].flat_map { |c| c["actions"] }.map { |a| a["source"] }.compact
-                             .select { |s| s["url"] }.uniq { |s| s["url"] }.first(10)
+                             .select { |s| s["url"] && s["path"] }.uniq { |s| s["url"] }.first(10)
 links = actions.map do |s|
   action = s["name"].split("#").last
   status = get(s["url"]).code.to_i
