@@ -23,4 +23,18 @@ class SourceTest < Minitest::Test
     assert RailsVis::Source.app_code?(RailsVis.root.join("app/controllers/patients_controller.rb").to_s, repo: repo)
     refute RailsVis::Source.app_code?(File.join(RbConfig::CONFIG["rubylibdir"], "set.rb"), repo: repo)
   end
+
+  def test_gems_vendored_inside_repo_are_not_app_code
+    probe = RailsVis.root.join("tmp/vendor_probe")
+    file = probe.join("gems/fake-1.0/lib/fake.rb")
+    FileUtils.mkdir_p(file.dirname)
+    File.write(file, "")
+    original = Gem.path
+    Gem.paths = { "GEM_PATH" => ([probe.to_s] + original).join(File::PATH_SEPARATOR), "GEM_HOME" => Gem.dir }
+    refute RailsVis::Source.app_code?(file.to_s, repo: repo)
+    assert RailsVis::Source.app_code?(RailsVis.root.join("test/dummy/app/models/patient.rb").to_s, repo: repo)
+  ensure
+    Gem.paths = { "GEM_PATH" => original.join(File::PATH_SEPARATOR), "GEM_HOME" => Gem.dir } if original
+    FileUtils.rm_rf(probe)
+  end
 end

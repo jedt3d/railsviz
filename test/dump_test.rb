@@ -65,6 +65,8 @@ class DumpTest < Minitest::Test
     [json_text, html].each do |text|
       refute_includes text, "secret-should-not-leak"
       refute_includes text, "sentinel-value-xyz"
+      url = ENV["DATABASE_URL"]
+      refute_includes text, url if url
     end
     data["databases"].each { |d| assert_empty d.keys & %w[url host username password], d.inspect }
   end
