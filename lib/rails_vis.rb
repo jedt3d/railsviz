@@ -3,6 +3,8 @@
 require "rails"
 require "active_support/core_ext/module/attribute_accessors"
 require_relative "rails_vis/version"
+require_relative "rails_vis/config"
+require_relative "rails_vis/repo"
 
 module RailsVis
   class Error < StandardError; end
