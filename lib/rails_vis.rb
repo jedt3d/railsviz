@@ -5,6 +5,8 @@ require "active_support/core_ext/module/attribute_accessors"
 require_relative "rails_vis/version"
 require_relative "rails_vis/config"
 require_relative "rails_vis/repo"
+require_relative "rails_vis/source"
+require_relative "rails_vis/body_scan"
 
 module RailsVis
   class Error < StandardError; end
