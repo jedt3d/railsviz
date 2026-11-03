@@ -55,4 +55,13 @@ class SourceTest < Minitest::Test
     Gem.paths = { "GEM_PATH" => original.join(File::PATH_SEPARATOR), "GEM_HOME" => Gem.dir } if original
     FileUtils.rm_rf(probe)
   end
+  # Gem code has no repo path; the node links to the gem instead.
+  def test_gem_code_node_links_to_gem
+    require "rails/info_controller"
+    node = RailsVis::Source.for_method(Rails::InfoController.instance_method(:properties), repo: repo)
+    assert_nil node["path"]
+    assert_nil node["line"]
+    assert_kind_of String, node["url"]
+    assert node["url"].start_with?("https://"), node["url"]
+  end
 end

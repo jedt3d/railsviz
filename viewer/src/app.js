@@ -64,6 +64,11 @@
   // A code node { name, path, line, url }: GitHub link when url is set, else the path as text.
   function codeLink(node, label) {
     if (!node) return h("span", { class: "muted" }, "no source");
+    // Gem code: no repository path or line, only a link to the gem.
+    if (node.path == null) {
+      const text = label || node.name;
+      return h("span", { class: "code-node" }, ext(node.url, text) || h("span", {}, text), " ", h("span", { class: "tag" }, "gem"));
+    }
     const where = node.path + (node.line ? ":" + node.line : "");
     const name = label || node.name || where;
     const path = name === node.path || name === where ? null : [" ", h("code", { class: "muted" }, where)];
