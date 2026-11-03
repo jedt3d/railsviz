@@ -8,6 +8,7 @@ require_relative "rails_vis/repo"
 require_relative "rails_vis/source"
 require_relative "rails_vis/body_scan"
 require_relative "rails_vis/doc_links"
+require_relative "rails_vis/collectors/routes"
 
 module RailsVis
   class Error < StandardError; end
