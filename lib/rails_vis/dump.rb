@@ -21,7 +21,7 @@ module RailsVis
       out = @root.join("doc/rails_vis")
       FileUtils.mkdir_p(out)
       out.join("data.json").write(JSON.pretty_generate(data))
-      embedded = JSON.generate(data).gsub("</", "<\\/")
+      embedded = ERB::Util.json_escape(JSON.generate(data))
       script = %(<script id="rails-vis-data" type="application/json">#{embedded}</script>)
       out.join("index.html").write(File.read(VIEWER).sub(TOKEN) { script })
       out

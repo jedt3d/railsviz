@@ -59,6 +59,8 @@ class DumpTest < Minitest::Test
     doc = JSON.parse(embedded)["documents"].find { |d| d["path"].end_with?("docs/escaping.md") }
     assert_equal RailsVis.root.join("docs/escaping.md").read, doc["body"]
     assert_includes doc["body"], "</script><b>injected</b>"
+    assert_includes doc["body"], "<!--<script>"
+    refute_includes embedded, "<"
   end
 
   def test_no_secret_leaks
