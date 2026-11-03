@@ -6,6 +6,6 @@ Run it with `bin/rails rails_vis:dump`. The output needs no running server: it c
 
 A newcomer should be able to answer from the dashboard alone: what the app does, which URL creates a record, which model owns it, and how to run the app locally.
 
-Scope of the first release: Rails 8.0 and 8.1, SQLite and PostgreSQL. Views: Start here, Request map, Domain model, Databases.
+Scope of the first release: Rails 8.0 and 8.1, SQLite and PostgreSQL. Views: Start here, Request map, Domain model, Databases, Boot, Middleware, Entry points, Gems, Documents.
 
 Further reading: [architecture](architecture.md), [local setup](runbooks/local-setup.md), and the decisions in `docs/decisions/`.

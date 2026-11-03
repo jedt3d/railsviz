@@ -41,6 +41,13 @@ module RailsVis
       end
       databases = run("databases") { Collectors::Databases.new(models: models["models"]).call }
       documents = run("documents") { Collectors::Documents.new(config: config, repo: repo).call }
+      boot = run("boot", empty: {}) { Collectors::Boot.new(repo: repo).call }
+      middleware = run("middleware") { Collectors::Middleware.new(repo: repo).call }
+      entry_points = run("entry_points", empty: {}) { Collectors::EntryPoints.new(repo: repo).call }
+      gems = run("gems") do
+        Collectors::Gems.new(repo: repo, middleware: middleware["middleware"],
+                             initializers: boot["boot"]["framework_initializers"] || []).call
+      end
 
       {
         "meta" => meta(repo),
@@ -49,23 +56,27 @@ module RailsVis
         "controllers" => controllers["controllers"],
         "models" => models["models"],
         "databases" => databases["databases"],
+        "boot" => boot["boot"],
+        "middleware" => middleware["middleware"],
+        "entry_points" => entry_points["entry_points"],
+        "gems" => gems["gems"],
         "warnings" => @warnings
       }
     end
 
-    # A failing collector yields an empty list and a warning instead of aborting the dump.
-    def run(name)
+    # A failing collector yields its empty shape (a list, or {} for Hash sections) and a warning instead of aborting the dump.
+    def run(name, empty: [])
       result = yield
       @warnings.concat(result["warnings"] || [])
       result
     rescue StandardError => e
       @warnings << Collectors.error(name, "collector failed", e)
-      { name => [] }
+      { name => empty }
     end
 
     def meta(repo)
       {
-        "schema_version" => 1,
+        "schema_version" => 2,
         "app_name" => Rails.application.class.module_parent_name,
         "rails_version" => Rails.version,
         "ruby_version" => RUBY_VERSION,

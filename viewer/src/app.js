@@ -19,6 +19,12 @@
   const models = list("models");
   const databases = list("databases");
   const warnings = list("warnings");
+  const middleware = list("middleware");
+  const gems = list("gems");
+  const hash = (key) => DATA[key] && typeof DATA[key] === "object" && !Array.isArray(DATA[key]) ? DATA[key] : {};
+  const boot = hash("boot");
+  const entry = hash("entry_points");
+  const entryList = (key) => Array.isArray(entry[key]) ? entry[key] : [];
 
   // id, label, icon, count shown in the sidebar
   const NAV = [
@@ -26,6 +32,10 @@
     ["requests", "Request map", "i-route", routes.length],
     ["domain", "Domain model", "i-model", models.length],
     ["databases", "Databases", "i-db", databases.length],
+    ["boot", "Boot", "i-boot", null],
+    ["middleware", "Middleware", "i-stack", middleware.length],
+    ["entry", "Entry points", "i-bolt", ["jobs", "mailers", "channels", "rake_tasks"].reduce((s, k) => s + entryList(k).length, 0)],
+    ["gems", "Gems", "i-gem", gems.length],
     ["docs", "Documents", "i-doc", documents.length]
   ];
   const state = { query: "", audience: "engineer" };
@@ -371,7 +381,7 @@
       }, aud === "engineer" ? "Engineer" : "User")));
     const stats = h("dl", { class: "stats" },
       [["Routes", routes.length, "i-route", "route"], ["Controllers", controllers.length, "i-ctrl", "route"], ["Models", models.length, "i-model", "model"],
-       ["Databases", databases.length, "i-db", "db"], ["Documents", documents.length, "i-doc", "doc"], ["Warnings", warnings.length, "i-warn", "warn"]]
+       ["Databases", databases.length, "i-db", "db"], ["Documents", documents.length, "i-doc", "doc"], ["Gems", gems.length, "i-gem", "doc"], ["Warnings", warnings.length, "i-warn", "warn"]]
         .map(([k, v, ic, role]) => h("div", { class: "stat stat--" + role }, h("dt", {}, icon(ic), k), h("dd", {}, v))));
     // Routes per controller: the shape of the app, the eight busiest named, the rest summed.
     const perCtrl = new Map();
@@ -587,9 +597,6 @@
     for (const [env, ds] of envs) {
       out.push(h("section", { class: "group" }, h("h2", { class: "env-head" }, icon("i-db"), env),
         table(["Name", "Adapter", "Database", "Solid", "Models", "Links"], ds.map((d) => {
-          const gl = d.gem_links || {};
-          const gemLinks = [["homepage", "Homepage"], ["documentation_uri", "Docs"], ["source_code_uri", "Source"], ["changelog_uri", "Changelog"], ["rubygems", "RubyGems"], ["rubydoc", "RubyDoc"]]
-            .map(([k, t]) => ext(gl[k], t)).filter(Boolean);
           return h("tr", {},
             h("td", {}, h("strong", {}, d.name), " ", d.replica ? h("span", { class: "tag tag--out" }, "replica") : null),
             h("td", {}, d.adapter || "unknown"),
@@ -597,10 +604,127 @@
               d.migrations_paths ? h("div", { class: "muted" }, "migrations ", h("code", {}, [].concat(d.migrations_paths).join(", "))) : null),
             h("td", {}, d.solid_component ? h("span", { class: "tag tag--db" }, d.solid_component) : h("span", { class: "muted" }, "none")),
             h("td", {}, (d.models || []).length ? (d.models || []).flatMap((m, i) => [i ? ", " : null, modelLink(m)]) : h("span", { class: "muted" }, "none")),
-            h("td", {}, h("div", { class: "links" }, ext(d.doc_url, "Guide"), gemLinks)));
+            h("td", {}, h("div", { class: "links" }, ext(d.doc_url, "Guide"), gemLinks(d.gem_links))));
         }))));
     }
     return out;
+  }
+
+  function gemLinks(gl) {
+    gl = gl || {};
+    return [["homepage", "Homepage"], ["documentation_uri", "Docs"], ["source_code_uri", "Source"], ["changelog_uri", "Changelog"], ["rubygems", "RubyGems"], ["rubydoc", "RubyDoc"]]
+      .map(([k, t]) => ext(gl[k], t)).filter(Boolean);
+  }
+
+  // A ruled section of a view: heading, an optional guide link, then the body.
+  function group(title, docUrl, ...body) {
+    return h("section", { class: "group" }, h("h2", { class: "group-head" }, title, " ", ext(docUrl, "Guide")), body);
+  }
+
+  const muted = (text) => h("span", { class: "muted" }, text);
+
+  function renderBoot() {
+    const envs = Array.isArray(boot.environments) ? boot.environments : [];
+    const files = Array.isArray(boot.initializer_files) ? boot.initializer_files : [];
+    const reads = [[boot.application, "application"], ...envs.map((n) => [n, "environment"]), ...files.map((n) => [n, "initializer"])]
+      .filter(([n]) => n && matches(n.name, n.path));
+    const apps = (boot.app_initializers || []).filter((i) => matches(i.name, i.railtie));
+    const fw = (boot.framework_initializers || []).filter((i) => matches(i.railtie));
+    const env = (boot.env_keys || []).filter((k) => matches(k.key));
+    const creds = boot.credentials_keys;
+    const credWarn = warnings.find((w) => w.where === "boot" && /^credentials/.test(w.message));
+    return [
+      h("header", { class: "page-head" }, h("h1", {}, "Boot and configuration"),
+        h("p", {}, "What Rails reads before the first request, in load order. ", ext(boot.doc_url, "Configuring Rails guide"))),
+      group("Read at boot", null, reads.length
+        ? h("ol", { class: "reading" }, reads.map(([n, kind]) => h("li", {}, codeLink(n), h("span", { class: "tag tag--out" }, kind))))
+        : emptyState("boot files", Object.keys(boot).length)),
+      group("Initializers the app defines", null, apps.length
+        ? table(["Name", "Railtie", "Source"], apps.map((i) => h("tr", {},
+            h("td", {}, h("code", {}, i.name)), h("td", {}, i.railtie), h("td", {}, codeLink(i.source, "source")))))
+        : empty("none")),
+      group("Framework initializers per railtie", null, fw.length
+        ? barChart(fw.map((i) => ({ label: i.railtie, value: i.count, href: safeUrl(i.url) })))
+        : empty("none")),
+      group("ENV keys read under config/", null, env.length
+        ? table(["Key", "Read at"], env.map((k) => h("tr", {},
+            h("td", {}, h("code", {}, k.key)),
+            h("td", {}, (k.references || []).flatMap((r, i) => [i ? " " : null, codeLink(r, r.path + (r.line ? ":" + r.line : ""))])))))
+        : empty("none")),
+      group("Credentials keys", null, Array.isArray(creds)
+        ? (creds.length ? h("ul", { class: "plain links" }, creds.map((k) => h("li", {}, h("code", {}, k)))) : empty("none"))
+        : h("p", { class: "warn-text inline-warn" }, icon("i-warn"), credWarn ? credWarn.message : "Credential keys were not collected."))
+    ];
+  }
+
+  function renderMiddleware() {
+    const rows = middleware.map((m, i) => [m, i + 1]).filter(([m]) => matches(m.name, m.gem && m.gem.name));
+    return [
+      h("header", { class: "page-head" }, h("h1", {}, "Middleware stack"),
+        h("p", {}, "Requests pass top to bottom. ", ext(middleware.length ? middleware[0].doc_url : null, "Rails on Rack guide"))),
+      rows.length
+        ? table(["#", "Middleware", "From", "Source"], rows.map(([m, n]) => h("tr", {},
+            h("td", { class: "num" }, n),
+            h("td", {}, h("code", {}, m.name)),
+            h("td", {}, m.gem ? h("span", { class: "tag tag--out" }, m.gem.name + " " + m.gem.version) : h("span", { class: "tag tag--accent" }, "this app")),
+            h("td", {}, m.source ? codeLink(m.source, "source") : muted("no source")))), "", [["n", "3rem"], ["name", null], ["from", null], ["source", null]])
+        : emptyState("middleware", middleware.length)
+    ];
+  }
+
+  function renderEntry() {
+    const pick = (key, ...fields) => entryList(key).filter((r) => matches(...fields.map((f) => r[f])));
+    const guide = (key) => (entryList(key)[0] || {}).doc_url;
+    const jobs = pick("jobs", "name", "queue");
+    const recurring = pick("recurring", "name", "class", "command", "env");
+    const mailers = entryList("mailers").flatMap((m) => (m.actions || []).map((a) => [m, a])).filter(([m, a]) => matches(m.name, a.name));
+    const channels = pick("channels", "name");
+    const tasks = pick("rake_tasks", "name", "comment");
+    const src = (n) => codeLink(n, "source");
+    return [
+      pageHeader("Entry points", "Work that starts outside a request. Queue adapter: " + (entry.queue_adapter || "unknown") + "."),
+      group("Jobs", guide("jobs"), jobs.length
+        ? table(["Name", "Queue", "Source"], jobs.map((j) => h("tr", {},
+            h("td", {}, h("code", {}, j.name)), h("td", {}, j.queue ? h("span", { class: "tag tag--out" }, j.queue) : muted("default")), h("td", {}, src(j.source)))))
+        : empty("none")),
+      group("Recurring tasks", null, recurring.length
+        ? table(["Env", "Name", "Runs", "Queue", "Schedule", "Source"], recurring.map((r) => h("tr", {},
+            h("td", {}, r.env), h("td", {}, h("code", {}, r.name)), h("td", {}, h("code", {}, r.class || r.command || "?")),
+            h("td", {}, r.queue || muted("default")), h("td", {}, r.schedule), h("td", {}, src(r.source)))))
+        : empty("none")),
+      group("Mailers", guide("mailers"), mailers.length
+        ? table(["Mailer", "Action", "Templates", "Source"], mailers.map(([m, a]) => h("tr", {},
+            h("td", {}, h("code", {}, m.name)), h("td", {}, h("code", {}, a.name)),
+            h("td", {}, (a.templates || []).length ? a.templates.flatMap((t, i) => [i ? " " : null, codeLink(t)]) : muted("none")),
+            h("td", {}, src(a.source)))))
+        : empty("none")),
+      group("Channels", guide("channels"), channels.length
+        ? table(["Name", "Source"], channels.map((c) => h("tr", {}, h("td", {}, h("code", {}, c.name)), h("td", {}, src(c.source)))))
+        : empty("none")),
+      group("Rake tasks", guide("rake_tasks"), tasks.length
+        ? table(["Task", "Description", "Source"], tasks.map((t) => h("tr", {},
+            h("td", {}, h("code", {}, t.name)), h("td", {}, t.comment || muted("none")), h("td", {}, src(t.source)))))
+        : empty("none"))
+    ];
+  }
+
+  function renderGems() {
+    const rows = gems.filter((g) => matches(g.name, g.railtie));
+    return [
+      pageHeader("Gems", gems.length + " gems in the bundle, the Gemfile's own first."),
+      rows.length
+        ? table(["Gem", "Version", "Railtie", "Initializers", "Middleware", "Links"], rows.map((g) => {
+            const mw = g.middleware || [];
+            return h("tr", {},
+              h("td", {}, h("strong", {}, g.name), g.direct ? [" ", h("span", { class: "tag tag--accent" }, "Gemfile")] : null),
+              h("td", {}, h("code", {}, g.version)),
+              h("td", {}, g.railtie ? h("code", {}, g.railtie) : muted("none")),
+              h("td", { class: "num" }, g.initializers || 0),
+              h("td", { class: "num", title: mw.length ? mw.join("\n") : null }, mw.length),
+              h("td", {}, h("div", { class: "links" }, gemLinks(g.links))));
+          }))
+        : emptyState("gems", gems.length)
+    ];
   }
 
   function renderDocs() {
@@ -663,6 +787,10 @@
       case "requests": nodes = renderRequests(arg); break;
       case "domain": nodes = renderDomain(arg); break;
       case "databases": nodes = renderDatabases(); break;
+      case "boot": nodes = renderBoot(); break;
+      case "middleware": nodes = renderMiddleware(); break;
+      case "entry": nodes = renderEntry(); break;
+      case "gems": nodes = renderGems(); break;
       case "docs": nodes = renderDocs(); break;
       case "doc": nodes = renderDoc(arg); active = "docs"; break;
       default: nodes = renderStart(); active = "start";

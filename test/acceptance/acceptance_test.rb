@@ -12,7 +12,7 @@ class AcceptanceTest < Minitest::Test
   SPEC = YAML.load_file(File.join(ROOT, "acceptance/targets.yml")).fetch(TARGET)
   REPORT = File.join(ROOT, "tmp/acceptance/#{TARGET}.report.json")
   DATA = File.join(ROOT, "tmp/acceptance", TARGET, SPEC["app_dir"], "doc/rails_vis/data.json")
-  COLLECTORS = %w[routes controllers models databases documents].freeze
+  COLLECTORS = %w[routes controllers models databases documents boot middleware entry_points gems].freeze
 
   def report = @report ||= JSON.parse(File.read(REPORT, encoding: "UTF-8"))
   def text = @text ||= File.read(DATA, encoding: "UTF-8")
@@ -53,6 +53,14 @@ class AcceptanceTest < Minitest::Test
   end
 
   # Gem-drawn routes (turbo-rails, Active Storage under /files) are kept with source nil and no engine.
+  def test_new_sections_have_content
+    assert_operator data["middleware"].size, :>=, 10
+    assert_operator data["gems"].size, :>=, 20
+    # An engine's dummy app may have no initializer files; its environments are always there.
+    key = TARGET == "spina" ? "environments" : "initializer_files"
+    refute_empty data["boot"][key]
+  end
+
   def test_spina_routes_are_engine_routes
     skip unless TARGET == "spina"
     others = data["routes"].select { |r| r["source"] && r["engine"] != "Spina::Engine" }

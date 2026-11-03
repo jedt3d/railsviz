@@ -17,6 +17,6 @@ flowchart LR
   html --> out[GitHub Pages or local file]
 ```
 
-- Collectors live in `lib/rails_vis/collectors/` and each returns its slice of `data.json`; a failing node becomes a warning, not an abort.
+- Collectors live in `lib/rails_vis/collectors/` (routes, controllers, models, databases, documents, `boot`, `middleware`, `entry_points` and `gems`) and each returns its slice of `data.json`; a failing node becomes a warning, not an abort.
 - `viewer/index.html` is the prebuilt viewer; the dump embeds `data.json` into a copy of it.
 - Nothing is fetched at dump time and no secret values are written.

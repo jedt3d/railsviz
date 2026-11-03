@@ -5,7 +5,7 @@ require "rake"
 require "minitest/mock"
 
 class DumpTest < Minitest::Test
-  KEYS = %w[meta documents routes controllers models databases warnings].freeze
+  KEYS = %w[meta documents routes controllers models databases boot middleware entry_points gems warnings].freeze
 
   # One dump shared by the read-only tests; the sentinel is set before it runs.
   # Tests that rewrite the output reset it so the next reader dumps again.
@@ -33,7 +33,7 @@ class DumpTest < Minitest::Test
     assert out.join("index.html").file?
     assert_equal KEYS.sort, data.keys.sort
     meta = data["meta"]
-    assert_equal 1, meta["schema_version"]
+    assert_equal 2, meta["schema_version"]
     assert_equal "Dummy", meta["app_name"]
     assert_equal Rails.version, meta["rails_version"]
     assert_equal RUBY_VERSION, meta["ruby_version"]
@@ -67,10 +67,20 @@ class DumpTest < Minitest::Test
     {"data.json" => json_text, "index.html" => html}.each do |name, text|
       refute_includes text, "secret-should-not-leak"
       refute_includes text, "sentinel-value-xyz"
+      refute_includes text, "recurring-arg-sentinel"
       url = ENV["DATABASE_URL"]
       refute text.include?(url), "DATABASE_URL leaked into #{name}" if url
     end
     data["databases"].each { |d| assert_empty d.keys & %w[url host username password], d.inspect }
+  end
+
+  def test_new_sections_present
+    assert_equal %w[app_initializers application credentials_keys doc_url env_keys environments framework_initializers initializer_files], data["boot"].keys.sort
+    assert_equal "Rack::Sendfile", data["middleware"].first["name"]
+    assert_equal %w[channels jobs mailers queue_adapter rake_tasks recurring], data["entry_points"].keys.sort
+    # The dummy shares the gem's Gemfile: rails comes in through `gemspec`, so the direct entry is rails_vis.
+    assert data["gems"].any? { |g| g["name"] == "rails" }
+    assert data["gems"].any? { |g| g["name"] == "rails_vis" && g["direct"] }
   end
 
   def test_warnings_collected
