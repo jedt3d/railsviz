@@ -21,6 +21,15 @@ class DatabasesCollectorTest < Minitest::Test
     assert_equal false, entry("test", "primary")["replica"]
   end
 
+  def test_anchor_without_database_skipped
+    yaml = YAML.safe_load("sqlite3: &s\n  adapter: sqlite3\ndevelopment:\n  <<: *s\n  database: x.sqlite3\n", aliases: true)
+    cfg = ActiveRecord::DatabaseConfigurations.new(yaml)
+    r = ActiveRecord::Base.stub(:configurations, cfg) { RailsVis::Collectors::Databases.new(models: []).call }
+    envs = r["databases"].map { |d| d["env"] }
+    assert_includes envs, "development"
+    refute_includes envs, "sqlite3"
+  end
+
   def test_solid_mapping
     cache = entry("production", "cache")
     if Gem.loaded_specs["solid_cache"]

@@ -12,8 +12,9 @@ module RailsVis
 
       def call
         @warnings = []
-        # The `default: &default` YAML anchor parses as an env; it is not one.
-        configs = ActiveRecord::Base.configurations.configs_for(include_hidden: true).reject { |c| c.env_name == "default" }
+        # A YAML anchor (`default: &default`, `sqlite3: &sqlite3`) parses as an env; it is not one, and never names a database. Database-less configs are kept only in the standard envs (a real one may leave database unset, e.g. Solid defaults).
+        known_envs = %w[development test production] << Rails.env.to_s
+        configs = ActiveRecord::Base.configurations.configs_for(include_hidden: true).reject { |c| c.env_name == "default" || (c.database.to_s.empty? && !known_envs.include?(c.env_name)) }
         databases = configs.filter_map do |config|
           entry(config)
         rescue StandardError => e
