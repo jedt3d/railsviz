@@ -1,0 +1,25 @@
+/* Base rules the Floor already decided (Hallmark scaffold, app scope), plus the per-script type switch. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+html { -webkit-text-size-adjust: 100%; scrollbar-color: var(--color-muted) var(--color-paper); scroll-padding-top: calc(var(--bar-h) + var(--space-md)); }
+body { margin: 0; background: var(--color-paper); color: var(--color-ink-2); font-family: var(--font-body); font-weight: var(--body-weight); font-size: var(--text-md); line-height: 1.55; -webkit-font-smoothing: antialiased; caret-color: var(--color-accent); font-synthesis: none; }
+::selection { background: var(--color-accent-soft); color: var(--color-accent-soft-ink); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+a { color: var(--color-ink); font-weight: 600; text-decoration-thickness: 1px; text-decoration-color: var(--color-muted); text-underline-offset: 0.16em; transition: text-decoration-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out); }
+a:hover { text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; }
+a:active { color: var(--color-accent); }
+h1, h2, h3, h4 { margin: 0; color: var(--color-ink); font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--tracking-display); line-height: 1.15; overflow-wrap: break-word; min-width: 0; text-wrap: balance; }
+h1 { font-size: var(--text-display); } h2 { font-size: var(--text-section); } h3 { font-size: var(--text-title); line-height: 1.3; }
+p { margin: 0; text-wrap: pretty; }
+img, video { max-width: 100%; height: auto; display: block; }
+svg { display: block; }
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+code, pre, kbd, .num, td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Per-script faces: Thai reads in the looped face, heads in the loopless one; Japanese takes Plex JP where installed. */
+:lang(th) { font-family: var(--font-th); line-height: 1.8; }
+:lang(th) :is(h1, h2, h3, h4) { font-family: var(--font-th-heading); letter-spacing: -0.01em; line-height: 1.3; }
+:lang(ja) { font-family: var(--font-ja); line-height: 1.85; line-break: strict; }
+:lang(ja) :is(h1, h2, h3, h4) { font-family: var(--font-ja); letter-spacing: 0; line-height: 1.35; word-break: auto-phrase; }
+@media (prefers-reduced-motion: reduce) { *:not(.keep-motion), *:not(.keep-motion)::before, *:not(.keep-motion)::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }

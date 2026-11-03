@@ -4,3 +4,6 @@
 marked     18.1.1   MIT      https://unpkg.com/marked@18.1.1/lib/marked.umd.js
 #          saved as marked.min.js: 18.1.1 ships no marked.min.js; lib/marked.umd.js is its minified UMD build
 mermaid    12.2.0   MIT      https://unpkg.com/mermaid@12.2.0/dist/mermaid.min.js
+# Fonts (viewer/vendor/fonts, embedded as data URIs): IBM Plex, SIL Open Font License 1.1, the Latin and Thai woff2
+# subsets served by Google Fonts on 2026-11-04 (fonts.gstatic.com; families ibmplexsans v20, ibmplexsansthailooped v12, ibmplexmono v20).
+# Japanese text falls back to the system face ("IBM Plex Sans JP" where installed, else Hiragino Sans / Noto Sans JP).
