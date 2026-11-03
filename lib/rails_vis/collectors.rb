@@ -13,9 +13,10 @@ module RailsVis
     end
 
     def error(where, prefix, exception)
-      quiet = QUIET_ERRORS.any? { |name| (klass = name.safe_constantize) && exception.is_a?(klass) }
-      detail = quiet ? "" : ": #{exception.message.lines.first.to_s.strip}"
-      warning(where, "#{prefix}: #{exception.class}#{detail}")
+      # By name only: resolving "SQLite3::Exception" would load the sqlite3 gem, and a LoadError aborts the dump.
+      names = exception.class.ancestors.filter_map(&:name)
+      detail = names.intersect?(QUIET_ERRORS) ? "" : ": #{exception.message.lines.first.to_s.strip}"
+      warning(where, "#{prefix}: #{exception.class.name || exception.class}#{detail}")
     end
   end
 end

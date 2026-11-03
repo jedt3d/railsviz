@@ -58,7 +58,7 @@ module RailsVis
       def validation(validator)
         {
           "kind" => validator.kind.to_s,
-          "attributes" => validator.attributes.map(&:to_s),
+          "attributes" => (validator.respond_to?(:attributes) ? validator.attributes.map(&:to_s) : []),
           "options" => validator.options.reject { |_, v| v.is_a?(Proc) }.transform_keys(&:to_s),
           "doc_url" => DocLinks.validation(validator.kind)
         }

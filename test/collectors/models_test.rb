@@ -41,6 +41,12 @@ class ModelsCollectorTest < Minitest::Test
     assert presence["doc_url"].end_with?("#method-i-validates_presence_of")
   end
 
+  def test_validator_without_attributes
+    custom = patient["validations"].find { |v| v["kind"] == "name_shape" }
+    assert_equal [], custom["attributes"]
+    refute(result["warnings"].any? { |w| w["message"].include?("Patient") })
+  end
+
   def test_callbacks
     assert_equal [%w[save before normalize_name]], patient["callbacks"].map { |c| c.values_at("event", "kind", "name") }
     source = patient["callbacks"].first["source"]

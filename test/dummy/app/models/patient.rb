@@ -1,6 +1,7 @@
 class Patient < ApplicationRecord
   has_many :visits, dependent: :destroy
   validates :name, presence: true
+  validates_with NameShapeValidator
   before_save :normalize_name
 
   private
