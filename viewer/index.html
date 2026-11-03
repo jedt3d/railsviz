@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>rails_vis</title>
+</head>
+<body>
+  <!-- Placeholder viewer; Task 11 replaces it. -->
+  <h1 id="app-name">rails_vis</h1>
+  <!--RAILS_VIS_DATA-->
+  <script>
+    const data = JSON.parse(document.getElementById("rails-vis-data").textContent);
+    document.getElementById("app-name").textContent = data.meta.app_name;
+  </script>
+</body>
+</html>
