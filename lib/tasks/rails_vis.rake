@@ -13,4 +13,10 @@ namespace :rails_vis do
     checker.call
     exit 1 if checker.failures.any?
   end
+
+  desc "Write .github/workflows/rails_vis.yml (GitHub Pages) and link it from README.md; FORCE=1 overwrites"
+  task :install do
+    repo = RailsVis::Repo.detect(Rails.root, repo_url: RailsVis::Config.load(Rails.root).repo_url)
+    RailsVis::Install.new(root: Rails.root, repo: repo, force: ENV["FORCE"] == "1").call
+  end
 end

@@ -21,6 +21,14 @@ The database must be prepared first (`bin/rails db:prepare`). Open `doc/rails_vi
 
 `bin/rails rails_vis:check_links` fetches a sample of the generated links (GitHub, Rails API, guides, gems; `RAILS_VIS_LINK_SAMPLE` per kind, default 10) and exits 1 when any does not answer 200. It is the only task that touches the network.
 
+## Publish
+
+```sh
+bin/rails rails_vis:install
+```
+
+Writes `.github/workflows/rails_vis.yml`, which runs `db:prepare` (with a PostgreSQL service when `config/database.yml` uses the `postgresql` adapter) and `rails_vis:dump` on every push to the default branch, then publishes `doc/rails_vis/` to GitHub Pages, and adds one README line linking to the page. Add `RAILS_MASTER_KEY` to the repository secrets if the app needs credentials to boot; enable Pages with source "GitHub Actions" in the repository settings. `FORCE=1` overwrites an existing workflow.
+
 ## Configuration
 
 Optional file `config/rails_vis.yml`. Every key is optional; these are the defaults:
