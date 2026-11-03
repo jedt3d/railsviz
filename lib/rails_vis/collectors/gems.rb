@@ -14,6 +14,7 @@ module RailsVis
         warnings = []
         direct = Bundler.definition.dependencies.map(&:name)
         railties = railtie_gems
+        @initializer_gems = @initializers.to_h { |i| [i["railtie"], gem_of(i["railtie"])] }
         specs = Bundler.load.specs.sort_by { |s| [direct.include?(s.name) ? 0 : 1, s.name] }
         gems = specs.filter_map do |spec|
           row(spec, direct.include?(spec.name), railties)
@@ -32,7 +33,7 @@ module RailsVis
           "version" => spec.version.to_s,
           "direct" => direct,
           "railtie" => railties.find { |_, gem| gem == spec.name }&.first,
-          "initializers" => @initializers.sum { |i| gem_of(i["railtie"]) == spec.name ? i["count"].to_i : 0 },
+          "initializers" => @initializers.sum { |i| @initializer_gems[i["railtie"]] == spec.name ? i["count"].to_i : 0 },
           "middleware" => @middleware.filter_map { |m| m["name"] if m.dig("gem", "name") == spec.name },
           "links" => DocLinks.gem(spec.name).transform_keys(&:to_s)
         }

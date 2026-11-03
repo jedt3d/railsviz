@@ -34,4 +34,12 @@ class MiddlewareCollectorTest < Minitest::Test
     assert rows.all? { |m| m.keys.sort == %w[doc_url gem name source] }, rows.map(&:keys).uniq.inspect
     assert rows.all? { |m| m["doc_url"] == RailsVis::DocLinks.rails_on_rack }
   end
+
+  def test_nameless_entry_is_kept_without_breaking_the_stack
+    stack = Rails.application.middleware.to_a + [ActionDispatch::MiddlewareStack::Middleware.new(proc { |_env| [200, {}, []] }, [], nil)]
+    out = RailsVis::Collectors::Middleware.new(repo: RailsVis::Repo.detect(RailsVis.root), stack: stack).call
+    assert_equal rows, out["middleware"].first(rows.size)
+    assert_equal({ "name" => "Proc", "gem" => nil, "source" => nil, "doc_url" => RailsVis::DocLinks.rails_on_rack }, out["middleware"].last)
+    assert_empty out["warnings"]
+  end
 end

@@ -27,7 +27,9 @@ module RailsVis
     def gem_spec(path, repo:)
       return unless path && gem_code?(path, repo: repo)
       real = real_path(path, repo)
-      Gem.loaded_specs.values.find { |s| real.start_with?(real_path(s.full_gem_path, repo) + File::SEPARATOR) }
+      # Deepest root wins: a path gem rooted above the bundle path would otherwise claim every vendored gem.
+      roots = Gem.loaded_specs.values.to_h { |s| [s, real_path(s.full_gem_path, repo)] }
+      roots.select { |_, root| real.start_with?(root + File::SEPARATOR) }.max_by { |_, root| root.length }&.first
     end
 
     def gem_url(path, repo:)
