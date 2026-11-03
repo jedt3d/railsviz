@@ -667,7 +667,7 @@
             h("td", { class: "num" }, n),
             h("td", {}, h("code", {}, m.name)),
             h("td", {}, m.gem ? h("span", { class: "tag tag--out" }, m.gem.name + " " + m.gem.version) : h("span", { class: "tag tag--accent" }, "this app")),
-            h("td", {}, m.source ? codeLink(m.source, "source") : muted("no source")))), "", [["n", "3rem"], ["name", null], ["from", null], ["source", null]])
+            h("td", {}, !m.source ? muted("no source") : m.source.path == null ? ext(m.source.url, "source") : codeLink(m.source, "source")))), "", [["n", "3rem"], ["name", null], ["from", null], ["source", null]])
         : emptyState("middleware", middleware.length)
     ];
   }
@@ -722,7 +722,7 @@
               h("td", { class: "num" }, g.initializers || 0),
               h("td", { class: "num", title: mw.length ? mw.join("\n") : null }, mw.length),
               h("td", {}, h("div", { class: "links" }, gemLinks(g.links))));
-          }))
+          }), "", [["gem", "14rem"], ["version", null], ["railtie", null], ["initializers", null], ["middleware", null], ["links", "18rem"]])
         : emptyState("gems", gems.length)
     ];
   }

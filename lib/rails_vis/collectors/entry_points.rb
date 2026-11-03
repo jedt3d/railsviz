@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "erb"
 require "yaml"
 
 module RailsVis
@@ -9,30 +8,22 @@ module RailsVis
     class EntryPoints
       def initialize(repo:)
         @repo = repo
-        @warnings = []
       end
 
       def call
         @warnings = []
         entry_points = {
-          "queue_adapter" => part("queue_adapter", nil) { ActiveJob::Base.queue_adapter_name.to_s },
-          "jobs" => part("jobs", []) { jobs },
-          "recurring" => part("recurring", []) { recurring },
-          "mailers" => part("mailers", []) { mailers },
-          "channels" => part("channels", []) { channels },
-          "rake_tasks" => part("rake_tasks", []) { rake_tasks }
+          "queue_adapter" => Collectors.part("entry_points", "queue_adapter", nil, @warnings) { ActiveJob::Base.queue_adapter_name.to_s if defined?(ActiveJob::Base) },
+          "jobs" => Collectors.part("entry_points", "jobs", [], @warnings) { jobs },
+          "recurring" => Collectors.part("entry_points", "recurring", [], @warnings) { recurring },
+          "mailers" => Collectors.part("entry_points", "mailers", [], @warnings) { mailers },
+          "channels" => Collectors.part("entry_points", "channels", [], @warnings) { channels },
+          "rake_tasks" => Collectors.part("entry_points", "rake_tasks", [], @warnings) { rake_tasks }
         }
         { "entry_points" => entry_points, "warnings" => @warnings }
       end
 
       private
-
-      def part(name, empty)
-        yield
-      rescue StandardError => e
-        @warnings << Collectors.error("entry_points", name, e)
-        empty
-      end
 
       # App-code descendants of base, sorted by name; each row in its own rescue.
       def app_classes(base, where)
@@ -47,6 +38,7 @@ module RailsVis
       end
 
       def jobs
+        return [] unless defined?(ActiveJob::Base)
         Rails.application.eager_load!
         app_classes(ActiveJob::Base, "job") do |klass, source|
           queue = klass.queue_name
@@ -55,11 +47,12 @@ module RailsVis
         end
       end
 
+      # ERB tags are shown as (erb), so nothing computed at dump time reaches data.json.
       def recurring
         file = Rails.root.join("config/recurring.yml")
         return [] unless file.file?
         text = file.read
-        data = YAML.safe_load(ERB.new(text).result, aliases: true)
+        data = YAML.safe_load(text.gsub(/<%.*?%>/m, "(erb)"), aliases: true)
         (data || {}).flat_map do |env, tasks|
           (tasks || {}).map do |name, task|
             line = text.lines.index { |l| l.start_with?("  #{name}:") }
@@ -74,6 +67,7 @@ module RailsVis
       end
 
       def mailers
+        return [] unless defined?(ActionMailer::Base)
         Rails.application.eager_load!
         app_classes(ActionMailer::Base, "mailer") do |klass, source|
           actions = klass.action_methods.sort.map do |action|
@@ -96,10 +90,9 @@ module RailsVis
       def rake_tasks
         require "rake"
         load_tasks if Rake::Task.tasks.empty?
-        root = Rails.root.to_s + File::SEPARATOR
         Rake::Task.tasks.sort_by(&:name).filter_map do |task|
           path, line = task.actions.first&.source_location
-          next unless path && File.expand_path(path).start_with?(root) && Source.app_code?(path, repo: @repo)
+          next unless path && Source.under_root?(path, Rails.root) && Source.app_code?(path, repo: @repo)
           { "name" => task.name, "comment" => task.comment,
             "source" => Source.node(name: task.name, path: path, line: line, repo: @repo), "doc_url" => DocLinks.rake }
         end

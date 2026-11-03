@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="Onboarding map of a Rails application: routes, controllers, models, databases and documents, each linked to its source line.">
+  <meta name="description" content="Onboarding map of a Rails application: routes, controllers, models, databases, boot, middleware, entry points, gems and documents, each linked to its source line.">
   <title>rails_vis</title>
   <script>try { var m = localStorage.getItem("rails_vis_mode"); if (m === "dark" || m === "light") document.documentElement.dataset.mode = m; } catch (e) {}</script>
   <style>
@@ -340,6 +340,7 @@ tr.has-warn td:first-child { box-shadow: inset 3px 0 0 var(--color-warn); paddin
 .env-head { display: flex; align-items: center; gap: var(--space-xs); margin: 0 0 var(--space-xs); }
 .env-head .icon { color: var(--color-db); }
 .links { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-sm); }
+.links a { white-space: nowrap; }
 .prose { max-width: 70ch; }
 .prose h1 { margin: var(--space-xs) 0 var(--space-md); }
 .prose h2 { margin: var(--space-xl) 0 var(--space-sm); padding-top: var(--space-sm); border-top: var(--rule-hair) solid var(--color-ink); }
@@ -394,7 +395,7 @@ tr.has-warn td:first-child { box-shadow: inset 3px 0 0 var(--color-warn); paddin
     <symbol id="i-stack" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.25" width="11" height="2.75" rx="0.75"/><rect x="2.5" y="6.625" width="11" height="2.75" rx="0.75"/><rect x="2.5" y="11" width="11" height="2.75" rx="0.75"/></symbol>
     <symbol id="i-bolt" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z"/></symbol>
     <symbol id="i-gem" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5 13.5 4.75v6.5L8 14.5 2.5 11.25v-6.5z"/><path d="M2.5 4.75 8 8l5.5-3.25M8 8v6.5"/></symbol>
-    <symbol id="i-doc"viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.75h5.25L13 5.5v8.75H4z"/><path d="M9 1.75V5.5h4M6 8.5h4M6 11h4"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.75h5.25L13 5.5v8.75H4z"/><path d="M9 1.75V5.5h4M6 8.5h4M6 11h4"/></symbol>
     <symbol id="i-warn" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.25 14.25 13H1.75z"/><path d="M8 6.5v3M8 11.5h.01"/></symbol>
     <symbol id="i-search" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></symbol>
     <symbol id="i-menu" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol>
@@ -417,7 +418,7 @@ tr.has-warn td:first-child { box-shadow: inset 3px 0 0 var(--color-warn); paddin
     <div class="search">
       <label class="visually-hidden" for="search">Filter names</label>
       <svg class="icon search-icon" aria-hidden="true"><use href="#i-search"/></svg>
-      <input id="search" type="search" placeholder="Filter by model, controller, path, document" autocomplete="off" spellcheck="false">
+      <input id="search" type="search" placeholder="Filter by name, path, gem, job, document" autocomplete="off" spellcheck="false">
     </div>
     <button id="mode" class="mode" type="button" aria-label="Switch to dark mode" aria-pressed="false">
       <svg class="icon icon-sun" aria-hidden="true"><use href="#i-sun"/></svg>
@@ -5517,7 +5518,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
             h("td", { class: "num" }, n),
             h("td", {}, h("code", {}, m.name)),
             h("td", {}, m.gem ? h("span", { class: "tag tag--out" }, m.gem.name + " " + m.gem.version) : h("span", { class: "tag tag--accent" }, "this app")),
-            h("td", {}, m.source ? codeLink(m.source, "source") : muted("no source")))), "", [["n", "3rem"], ["name", null], ["from", null], ["source", null]])
+            h("td", {}, !m.source ? muted("no source") : m.source.path == null ? ext(m.source.url, "source") : codeLink(m.source, "source")))), "", [["n", "3rem"], ["name", null], ["from", null], ["source", null]])
         : emptyState("middleware", middleware.length)
     ];
   }
@@ -5572,7 +5573,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
               h("td", { class: "num" }, g.initializers || 0),
               h("td", { class: "num", title: mw.length ? mw.join("\n") : null }, mw.length),
               h("td", {}, h("div", { class: "links" }, gemLinks(g.links))));
-          }))
+          }), "", [["gem", "14rem"], ["version", null], ["railtie", null], ["initializers", null], ["middleware", null], ["links", "18rem"]])
         : emptyState("gems", gems.length)
     ];
   }

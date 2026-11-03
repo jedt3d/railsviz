@@ -13,7 +13,7 @@ module RailsVis
         warnings = []
         rows = @stack.map do |entry|
           # entry.name calls klass.name, which a Proc or a plain object lacks; inspect gives its class name instead.
-          label = entry.klass.respond_to?(:name) ? entry.name : entry.inspect
+          label = entry.klass.respond_to?(:name) ? (entry.name || entry.inspect) : entry.inspect
           row(entry, label)
         rescue StandardError => e
           warnings << Collectors.error("middleware", label, e)

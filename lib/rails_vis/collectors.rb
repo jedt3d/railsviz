@@ -12,6 +12,14 @@ module RailsVis
       { "where" => where, "message" => message }
     end
 
+    # Runs one part of a collector; a raise records a warning and yields the part's empty shape.
+    def part(where, name, empty, warnings)
+      yield
+    rescue StandardError => e
+      warnings << error(where, name, e)
+      empty
+    end
+
     def error(where, prefix, exception)
       # By name only: resolving "SQLite3::Exception" would load the sqlite3 gem, and a LoadError aborts the dump.
       names = exception.class.ancestors.filter_map(&:name)

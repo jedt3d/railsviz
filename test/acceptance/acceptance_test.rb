@@ -53,19 +53,19 @@ class AcceptanceTest < Minitest::Test
   end
 
   # Gem-drawn routes (turbo-rails, Active Storage under /files) are kept with source nil and no engine.
+  def test_spina_routes_are_engine_routes
+    skip unless TARGET == "spina"
+    others = data["routes"].select { |r| r["source"] && r["engine"] != "Spina::Engine" }
+    assert_empty others.map { |r| "#{r["verb"]} #{r["path"]} (#{r["engine"].inspect})" }
+    assert_operator data["routes"].count { |r| r["engine"] == "Spina::Engine" }, :>=, 100
+  end
+
   def test_new_sections_have_content
     assert_operator data["middleware"].size, :>=, 10
     assert_operator data["gems"].size, :>=, 20
     # An engine's dummy app may have no initializer files; its environments are always there.
     key = TARGET == "spina" ? "environments" : "initializer_files"
     refute_empty data["boot"][key]
-  end
-
-  def test_spina_routes_are_engine_routes
-    skip unless TARGET == "spina"
-    others = data["routes"].select { |r| r["source"] && r["engine"] != "Spina::Engine" }
-    assert_empty others.map { |r| "#{r["verb"]} #{r["path"]} (#{r["engine"].inspect})" }
-    assert_operator data["routes"].count { |r| r["engine"] == "Spina::Engine" }, :>=, 100
   end
 
   def test_spina_route_sources_are_repo_config

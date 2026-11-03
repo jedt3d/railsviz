@@ -39,6 +39,16 @@ module RailsVis
       links[:source_code_uri] || links[:homepage] || links[:rubygems]
     end
 
+    # Compares real paths, so a symlinked root still matches.
+    def under_root?(path, root)
+      real, base = [path, root].map do |p|
+        File.realpath(p.to_s)
+      rescue SystemCallError
+        File.expand_path(p.to_s)
+      end
+      real.start_with?(base + File::SEPARATOR)
+    end
+
     def real_path(path, repo)
       abs = File.expand_path(path.to_s, repo.root.to_s)
       File.realpath(abs)

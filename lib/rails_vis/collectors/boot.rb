@@ -13,27 +13,20 @@ module RailsVis
 
       def call
         @warnings = []
-        initializers = part("initializers", { "app_initializers" => [], "framework_initializers" => [] }) { initializer_groups }
+        initializers = Collectors.part("boot", "initializers", { "app_initializers" => [], "framework_initializers" => [] }, @warnings) { initializer_groups }
         boot = {
-          "application" => part("application", nil) { Source.for_const(Rails.application.class, repo: @repo) },
-          "environments" => part("environments", []) { file_nodes(Rails.root.glob("config/environments/*.rb").sort) },
-          "initializer_files" => part("initializer_files", []) { file_nodes(initializer_paths) },
+          "application" => Collectors.part("boot", "application", nil, @warnings) { Source.for_const(Rails.application.class, repo: @repo) },
+          "environments" => Collectors.part("boot", "environments", [], @warnings) { file_nodes(Rails.root.glob("config/environments/*.rb").sort) },
+          "initializer_files" => Collectors.part("boot", "initializer_files", [], @warnings) { file_nodes(initializer_paths) },
           **initializers,
-          "env_keys" => part("env_keys", []) { env_keys },
-          "credentials_keys" => part("credentials", nil) { credentials_keys },
+          "env_keys" => Collectors.part("boot", "env_keys", [], @warnings) { env_keys },
+          "credentials_keys" => Collectors.part("boot", "credentials", nil, @warnings) { credentials_keys },
           "doc_url" => DocLinks.configuring
         }
         { "boot" => boot, "warnings" => @warnings }
       end
 
       private
-
-      def part(name, empty)
-        yield
-      rescue StandardError => e
-        @warnings << Collectors.error("boot", name, e)
-        empty
-      end
 
       def file_nodes(files)
         files.map do |file|
@@ -53,7 +46,7 @@ module RailsVis
           path, line = init.block&.source_location
           railtie = init.context_class.name
           # Under Rails.root too: a gem checked out inside the repo (rails_vis in its own dummy) is not the app's initializer.
-          if path && Source.app_code?(path, repo: @repo) && File.expand_path(path).start_with?(Rails.root.to_s + File::SEPARATOR)
+          if path && Source.app_code?(path, repo: @repo) && Source.under_root?(path, Rails.root)
             app << { "name" => init.name.to_s, "railtie" => railtie,
                      "source" => Source.node(name: init.name.to_s, path: path, line: line, repo: @repo) }
           else

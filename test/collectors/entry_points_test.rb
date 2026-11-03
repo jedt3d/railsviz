@@ -59,6 +59,13 @@ class EntryPointsCollectorTest < Minitest::Test
     assert_match(/\Arecurring: config\/recurring\.yml: /, warnings.first["message"])
   end
 
+  def test_recurring_erb_tags_are_not_evaluated
+    rows, = recurring_with("production:\n  nightly:\n    class: WelcomeJob\n    queue: <%= ENV.fetch(\"ERB_SENTINEL\", \"erb-sentinel-value\") %>\n    schedule: every <%= 2 %> hours\n")
+    assert_equal "(erb)", rows.first["queue"]
+    assert_equal "every (erb) hours", rows.first["schedule"]
+    refute_includes JSON.generate(rows), "erb-sentinel"
+  end
+
   def test_mailers_and_templates
     mailer = ep["mailers"].find { |m| m["name"] == "PatientMailer" }
     assert_equal %w[reminder welcome], mailer["actions"].map { |a| a["name"] }

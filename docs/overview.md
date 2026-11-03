@@ -8,4 +8,6 @@ A newcomer should be able to answer from the dashboard alone: what the app does,
 
 Scope of the first release: Rails 8.0 and 8.1, SQLite and PostgreSQL. Views: Start here, Request map, Domain model, Databases, Boot, Middleware, Entry points, Gems, Documents.
 
+`data.json` has eleven top-level keys: `meta`, `documents`, `routes`, `controllers`, `models`, `databases`, `boot`, `middleware`, `entry_points`, `gems` and `warnings`; schema_version 2 added boot, middleware, entry_points and gems (schema 1 had the first seven).
+
 Further reading: [architecture](architecture.md), [local setup](runbooks/local-setup.md), and the decisions in `docs/decisions/`.
