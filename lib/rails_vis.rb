@@ -13,6 +13,7 @@ require_relative "rails_vis/collectors/routes"
 require_relative "rails_vis/collectors/controllers"
 require_relative "rails_vis/collectors/models"
 require_relative "rails_vis/collectors/databases"
+require_relative "rails_vis/collectors/documents"
 
 module RailsVis
   class Error < StandardError; end
