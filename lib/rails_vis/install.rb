@@ -80,7 +80,7 @@ module RailsVis
 
         on:
           push:
-            branches: [#{branch}]
+            branches: ["#{branch}"]
           workflow_dispatch:
 
         permissions:
@@ -90,21 +90,24 @@ module RailsVis
 
         concurrency:
           group: rails_vis-pages
-          cancel-in-progress: true
+          cancel-in-progress: false
 
         jobs:
           dump:
             runs-on: ubuntu-latest
         #{postgres? ? POSTGRES_SERVICE : ""}    env:
               RAILS_ENV: development
-              RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
         #{postgres? ? "      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rails_vis\n" : ""}    steps:
               - uses: actions/checkout@v4
               - uses: ruby/setup-ruby@v1
                 with:
                   bundler-cache: true
         #{vips? ? "      - name: Install libvips\n        run: sudo apt-get update && sudo apt-get install -y libvips\n" : ""}      - run: bin/rails db:prepare
+                env:
+                  RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
               - run: bin/rails rails_vis:dump
+                env:
+                  RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
               - uses: actions/configure-pages@v5
               - uses: actions/upload-pages-artifact@v3
                 with:

@@ -292,7 +292,7 @@
     for (const [key, rs] of groups) {
       const ctrl = byKey.get(key);
       const className = ctrl ? ctrl.name : key; // missing controller: show the route key; the warning names the class
-      const visible = rs.filter((r) => matches(className, key, r.path, r.action, r.name));
+      const visible = rs.filter((r) => matches(className, key, r.path, r.action, r.name, r.redirect && r.redirect.to));
       if (!visible.length) continue;
       shown += visible.length;
       const missing = warnings.filter((w) => w.where === "controllers" && w.message.startsWith(key + "#") && /does not exist/.test(w.message));

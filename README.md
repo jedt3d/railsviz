@@ -19,7 +19,7 @@ bin/rails rails_vis:dump
 
 The database must be prepared first (`bin/rails db:prepare`). Open `doc/rails_vis/index.html`, or publish `doc/rails_vis/` to GitHub Pages. Commit `doc/rails_vis/` or add it to `.gitignore`; either way it does not mark the working tree dirty, but any other uncommitted change does, and then source links point at the last commit.
 
-`bin/rails rails_vis:check_links` fetches a sample of the generated links (GitHub, Rails API, guides, gems; `RAILS_VIS_LINK_SAMPLE` per kind, default 10) and exits 1 when any does not answer 200. It is the only task that touches the network.
+`bin/rails rails_vis:check_links` fetches a sample of the generated links (GitHub, Rails API, guides, gems; `RAILS_VIS_LINK_SAMPLE` per kind, default 10) and exits 1 when any does not answer 200. It is the only task that touches the network. GitHub links answer 404 until the dumped commit is pushed; run it after pushing.
 
 ## Publish
 

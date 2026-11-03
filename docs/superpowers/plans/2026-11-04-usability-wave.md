@@ -17,7 +17,7 @@
 - `data.json` top-level keys stay exactly `meta, documents, routes, controllers, models, databases, warnings`; `meta.schema_version` stays the integer `1`. New fields are additive.
 - Every code node stays `{ "name", "path", "line", "url" }`; built with `RailsVis::Source.node` / `for_method` / `for_const`, never by hand.
 - "App code" means `RailsVis::Source.app_code?(path, repo:)`; gem code is never linked by repository path.
-- Nothing that could hold a secret is written to any generated file: no credential values, ENV values, database `url`, `password`, `host`, `username`. The generated workflow references `${{ secrets.RAILS_MASTER_KEY }}` by name only.
+- Nothing that could hold a secret is written to any generated file: no credential values, ENV values, database `url`, `password`, `host`, `username`. The generated workflow references `${{ secrets.RAILS_MASTER_KEY }}` by name only (the generated workflow's `DATABASE_URL` names the ephemeral CI service's throwaway password, which is not an app secret).
 - A failure on one node records a warning `{ "where", "message" }` via `RailsVis::Collectors.warning` / `.error` and continues.
 - Viewer: vanilla JS in `viewer/src/app.js`; after any change run `ruby script/build_viewer.rb` and commit `viewer/index.html` (the test suite asserts the build is idempotent).
 - Tests: `bundle exec rake test` must stay green on SQLite; the dummy app lives in `test/dummy` and is the only fixture app.

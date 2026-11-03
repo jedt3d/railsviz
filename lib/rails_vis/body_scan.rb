@@ -16,6 +16,7 @@ module RailsVis
     end
 
     # Line of the first `before_action :name` (or after/around, prepend_/append_) call in the file, or nil.
+    # Returns the first matching call in the file, regardless of enclosing class or receiver; raises on an unreadable file.
     # Pass a Hash as `cache` to parse each file once across calls.
     def self.callback_line(path, kind, filter_name, cache: {})
       pattern = /\A(?:prepend_|append_)?#{kind}_action\z/
