@@ -19,6 +19,14 @@ bin/rails rails_vis:dump
 
 The database must be prepared first (`bin/rails db:prepare`). Open `doc/rails_vis/index.html`, or publish `doc/rails_vis/` to GitHub Pages. Commit `doc/rails_vis/` or add it to `.gitignore`; either way it does not mark the working tree dirty, but any other uncommitted change does, and then source links point at the last commit.
 
+## Publish
+
+```sh
+bin/rails rails_vis:install
+```
+
+Writes `.github/workflows/rails_vis.yml`, which runs `db:prepare` (with a PostgreSQL service when `config/database.yml` uses the `postgresql` adapter) and `rails_vis:dump` on every push to the default branch, then publishes `doc/rails_vis/` to GitHub Pages, and adds one README line linking to the page. Add `RAILS_MASTER_KEY` to the repository secrets if the app needs credentials to boot; enable Pages with source "GitHub Actions" in the repository settings. `FORCE=1` overwrites an existing workflow.
+
 ## Configuration
 
 Optional file `config/rails_vis.yml`. Every key is optional; these are the defaults:
