@@ -6,5 +6,7 @@ Rails.application.routes.draw do
   resources :patients, only: %i[index show] do
     get :export, on: :member
   end
+  get "/admin", to: "admin#index"
+  get "/admin/reports", to: "admin/reports#index"
   mount Blog::Engine => "/blog"
 end
