@@ -6,7 +6,8 @@ module RailsVis
   module Collectors
     # Reads the project's Markdown documents, their optional YAML front matter, and resolves `related` to code nodes.
     class Documents
-      FRONT_MATTER = /\A---\n(.*?)\n---\n/m
+      # Tolerates CRLF and front matter that ends at EOF; a BOM is stripped when the file is read.
+      FRONT_MATTER = /\A---\r?\n(.*?)\r?\n---(?:\r?\n|\z)/m
       FOLDER_KINDS = { "decisions" => "decision", "research" => "reference" }.freeze
       DIAGRAM_FOLDERS = %w[workflows sequences ui domain security].freeze
       # File.fnmatch? with FNM_PATHNAME treats a trailing "**" as one segment; "**/*" matches any depth.
@@ -49,7 +50,7 @@ module RailsVis
       end
 
       def document(rel, base)
-        text = File.read(root.join(rel))
+        text = File.read(root.join(rel), mode: "r:bom|utf-8")
         meta, body = front_matter(rel, text)
         start = @config.start_here.index(rel)
         {
@@ -67,17 +68,18 @@ module RailsVis
       def front_matter(rel, text)
         match = FRONT_MATTER.match(text)
         return [{}, text] unless match
-        data = YAML.safe_load(match[1])
+        data = YAML.safe_load(match[1], permitted_classes: [Date, Time])
         [data.is_a?(Hash) ? data : {}, match.post_match]
       rescue Psych::Exception => e
-        add_warning("#{rel}: front matter is not valid YAML (#{e.message}); treated as absent")
+        add_warning("#{rel}: front matter could not be loaded (#{e.message}); treated as absent")
         [{}, text]
       end
 
       def kind(rel, base, body)
-        dir = File.dirname(rel)
-        return "overview" if dir == base
-        folder = File.basename(dir)
+        # Kind follows the first folder below the docs root, so docs/domain/sub/x.md is a domain/ document.
+        segments = Pathname.new(rel).relative_path_from(base).each_filename.to_a
+        return "overview" if segments.size == 1
+        folder = segments.first
         return mermaid?(body) ? "diagram" : "reference" if DIAGRAM_FOLDERS.include?(folder)
         FOLDER_KINDS.fetch(folder, "reference")
       end

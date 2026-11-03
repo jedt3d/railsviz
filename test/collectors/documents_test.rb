@@ -61,6 +61,40 @@ class DocumentsCollectorTest < Minitest::Test
     end
   end
 
+  # Writes { relative path => content } into a temp docs root and collects it.
+  def collect_temp(files)
+    Dir.mktmpdir do |dir|
+      files.each do |rel, content|
+        FileUtils.mkdir_p(File.dirname(File.join(dir, rel)))
+        File.binwrite(File.join(dir, rel), content)
+      end
+      yield collect(config(docs: ["#{dir}/**/*.md"])), dir
+    end
+  end
+
+  def test_dated_front_matter_loads
+    collect_temp("dated.md" => "---\ntitle: Dated\ndate: 2026-11-03\n---\nBody\n") do |res, _|
+      assert_equal "Dated", res["documents"].first["title"]
+      assert_equal [], res["warnings"]
+    end
+  end
+
+  def test_crlf_and_bom_front_matter
+    collect_temp("crlf.md" => "﻿---\r\ntitle: CRLF\r\n---\r\nBody\r\n") do |res, _|
+      crlf = res["documents"].first
+      assert_equal "CRLF", crlf["title"]
+      refute crlf["body"].start_with?("---")
+      assert_equal "Body\r\n", crlf["body"]
+    end
+  end
+
+  def test_kind_from_first_folder_below_root
+    collect_temp("domain/sub/x.md" => "# X\n\n```mermaid\ngraph TD\n```\n", "top.md" => "# Top\n") do |res, _|
+      assert_equal "diagram", res["documents"].find { |d| d["path"].end_with?("domain/sub/x.md") }["kind"]
+      assert_equal "overview", res["documents"].find { |d| d["path"].end_with?("top.md") }["kind"]
+    end
+  end
+
   def test_exclude
     assert result["documents"].none? { |d| d["path"].include?("docs/superpowers/") }
     assert_equal 4, result["documents"].size
