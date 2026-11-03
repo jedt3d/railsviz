@@ -16,7 +16,8 @@
 - No new dependency in the host app beyond the gem itself. No network access during a dump.
 - Output: `doc/rails_vis/data.json` and `doc/rails_vis/index.html`. `index.html` embeds the JSON in `<script id="rails-vis-data" type="application/json">`; the viewer never fetches. (Builder's call: one load path for both GitHub Pages and file://.)
 - `data.json` top-level keys exactly: `meta`, `documents`, `routes`, `controllers`, `models`, `databases`, `warnings`. `meta.schema_version` is the integer `1`.
-- Every code node is a hash `{ "name", "path", "line", "url" }`; `url` is `nil` when no repository is known. `path` is relative to the app root.
+- Every code node is a hash `{ "name", "path", "line", "url" }`; `url` is `nil` when no repository is known. `path` is relative to the repository root (`git rev-parse --show-toplevel`), falling back to the Rails root when there is no repository. The two differ for an engine's dummy app (Spina: Rails root `test/dummy`, code in `app/` at the repository root), and GitHub permalinks need the repository-relative path.
+- "App code" means a source path inside the repository root. Classes defined outside it (installed gems) are skipped by the collectors.
 - Source URL format: `https://github.com/{owner}/{repo}/blob/{sha}/{path}#L{line}`, commit SHA only, never a branch name.
 - Rails API URL: `https://api.rubyonrails.org/v{Rails.version}/classes/{Module/Path}.html#method-i-{name}`; guides: `https://guides.rubyonrails.org/v{major.minor}/{guide}.html`.
 - Nothing that could hold a secret is written: no credential values, ENV values, database `url`, `password`, `host`, or `username`.
@@ -44,13 +45,14 @@
 **Interfaces:**
 - Produces: `RailsVis::VERSION = "0.1.0"`; `RailsVis::Railtie` loading `lib/tasks/rails_vis.rake`; `test/test_helper.rb` that boots `test/dummy` in the `test` environment and exposes `RailsVis.root` (the dummy app root as `Pathname`).
 
-- [ ] **Step 1: Initialize the repository and gem layout**
+- [ ] **Step 1: Generate the gem layout**
 
+The repository already exists on `main` with `docs/` and `.gitignore` committed (done 2026-11-03 before execution started).
 ```bash
-cd /Users/worajedt/RailsVis && git init -b main
+cd /Users/worajedt/RailsVis
 bundle gem rails_vis --test=minitest --no-coc --no-mit --no-changelog --linter=none --ci=none
 ```
-Move the generated files up one level into `/Users/worajedt/RailsVis` (the generator creates a nested `rails_vis/` folder), then delete the nested folder.
+Move the generated files up one level into the repository root (the generator creates a nested `rails_vis/` folder; keep the existing `.gitignore` entries and merge the generator's into it), then delete the nested folder.
 
 - [ ] **Step 2: Fill the gemspec**
 
@@ -95,7 +97,7 @@ Expected: 1 runs, 0 failures.
 
 - [ ] **Step 8: Rakefile test task and commit**
 
-`Rakefile`: `Rake::TestTask` with `t.libs << "test"`, `t.pattern = "test/**/*_test.rb"`, excluding `test/dummy/**`. `.gitignore`: `test/dummy/log/`, `test/dummy/tmp/`, `test/dummy/storage/`, `test/dummy/doc/`, `pkg/`.
+`Rakefile`: `Rake::TestTask` with `t.libs << "test"`, `t.pattern = "test/**/*_test.rb"`, excluding `test/dummy/**` and `test/acceptance/**`.
 ```bash
 git add -A && git commit -m "chore: gem skeleton with dummy Rails 8 app and minitest harness"
 ```
@@ -109,7 +111,7 @@ git add -A && git commit -m "chore: gem skeleton with dummy Rails 8 app and mini
 
 **Interfaces:**
 - Produces: `RailsVis::Config.load(root) -> Config` with readers `docs`, `exclude`, `start_here`, `pages_dir`, `repo_url` (defaults from Global Constraints; reads `config/rails_vis.yml` if present).
-- Produces: `RailsVis::Repo.detect(root, repo_url: nil) -> Repo` with `owner`, `repo`, `sha`, `dirty?`, `url_for(path, line) -> String | nil`, `to_h -> { "owner", "repo", "sha", "dirty", "url_base" }`, `warnings -> Array<String>`.
+- Produces: `RailsVis::Repo.detect(root, repo_url: nil) -> Repo` with `root` (Pathname: the git toplevel, or `root` when not a repository), `owner`, `repo`, `sha`, `dirty?`, `relative(path) -> String` (path relative to `root`), `url_for(path, line) -> String | nil` (takes an absolute or repository-relative path), `to_h -> { "owner", "repo", "sha", "dirty", "url_base" }`, `warnings -> Array<String>`.
 
 - [ ] **Step 1: Write failing config tests**
 
@@ -119,6 +121,7 @@ git add -A && git commit -m "chore: gem skeleton with dummy Rails 8 app and mini
 
 `test/repo_test.rb`, each in a `Dir.mktmpdir`:
 - `test_github_ssh_origin`: `git init`, commit one file, `git remote add origin git@github.com:acme/app.git`; assert `owner == "acme"`, `repo == "app"`, `sha` is 40 hex chars, `url_for("app/x.rb", 7)` ends with `/blob/#{sha}/app/x.rb#L7`.
+- `test_root_is_git_toplevel`: detect from a subdirectory `sub/dummy` of the temp repo; assert `root` is the temp repo and `relative("#{root}/sub/dummy/config/routes.rb") == "sub/dummy/config/routes.rb"`.
 - `test_github_https_origin_with_dot_git`: same with `https://github.com/acme/app.git`.
 - `test_dirty_tree_warns`: modify a tracked file; assert `dirty?` and a warning mentioning "dirty".
 - `test_no_git_repo`: plain dir; assert `url_for` returns `nil`, `sha` is `nil`, one warning.
@@ -154,7 +157,7 @@ git add -A && git commit -m "feat: config file and GitHub permalink builder"
 
 **Interfaces:**
 - Consumes: `Repo#url_for`.
-- Produces: `RailsVis::Source.node(name:, path:, line:, repo:) -> Hash` (the four-key node, `path` made relative to `RailsVis.root`); `RailsVis::Source.for_method(unbound_method, repo:) -> Hash | nil`; `RailsVis::Source.for_const(klass, repo:) -> Hash | nil` (via `Object.const_source_location`).
+- Produces: `RailsVis::Source.node(name:, path:, line:, repo:) -> Hash` (the four-key node, `path` made relative via `repo.relative`); `RailsVis::Source.app_code?(path, repo:) -> Boolean` (true when the absolute path is inside `repo.root`); `RailsVis::Source.for_method(unbound_method, repo:) -> Hash | nil`; `RailsVis::Source.for_const(klass, repo:) -> Hash | nil` (via `Object.const_source_location`).
 - Produces: `RailsVis::BodyScan.new(path, method_name, line) -> BodyScan` with `constants -> Array<String>` (constant and constant-path names read in the method body, e.g. `"Patient"`, `"Admin::Visit"`) and `inertia_component -> String | nil | :dynamic` (`:dynamic` when `render inertia:` has a non-string value).
 
 - [ ] **Step 1: Add the dummy controller**
@@ -245,10 +248,19 @@ git add -A && git commit -m "feat: Rails API, guide and gem documentation links"
 
 **Interfaces:**
 - Consumes: `Source.node`, `DocLinks.routing`.
-- Produces: `RailsVis::Collectors::Routes.new(repo:).call -> { "routes" => Array<Hash>, "warnings" => Array<Hash> }`. Each route: `{ "verb", "path", "name", "controller", "action", "engine", "source" (node or nil), "doc_url" }`. Internal Rails routes (`route.internal`) are excluded. Engine-mounted routes keep `engine` = engine class name, else `nil`.
+- Produces: `RailsVis::Collectors::Routes.new(repo:).call -> { "routes" => Array<Hash>, "warnings" => Array<Hash> }`. Each route: `{ "verb", "path", "name", "controller", "action", "engine", "source" (node or nil), "doc_url" }`. Internal Rails routes (`route.internal`) are excluded. A route that mounts a `Rails::Engine` is replaced by that engine's own routes, each with `path` prefixed by the mount path and `engine` = the engine class name; application routes have `engine` `nil`.
 
-- [ ] **Step 1: Dummy routes**
+- [ ] **Step 1: Dummy routes and a mounted engine**
 
+`test/dummy/config/initializers/blog_engine.rb`:
+```ruby
+module Blog
+  class Engine < ::Rails::Engine
+    isolate_namespace Blog
+  end
+end
+Blog::Engine.routes.draw { get "/posts", to: "posts#index" }
+```
 `test/dummy/config/routes.rb`:
 ```ruby
 Rails.application.routes.draw do
@@ -256,6 +268,7 @@ Rails.application.routes.draw do
   resources :patients, only: %i[index show] do
     get :export, on: :member
   end
+  mount Blog::Engine => "/blog"
 end
 ```
 
@@ -265,6 +278,7 @@ end
 - `test_internal_routes_excluded`: no route whose path starts with `/rails/`.
 - `test_verb_path_controller_action`: `/health` → `verb "GET"`, `controller "health"`, `action "show"`.
 - `test_doc_url`: every route's `doc_url` equals `DocLinks.routing`.
+- `test_engine_routes_expanded`: a route with `path "/blog/posts"`, `controller "blog/posts"`, `engine "Blog::Engine"`; no route whose `path == "/blog"` without an action.
 
 - [ ] **Step 3: Run to verify they fail**
 
@@ -273,7 +287,7 @@ Expected: NameError on the collector.
 
 - [ ] **Step 4: Implement the collector**
 
-Set `ActionDispatch::Routing::Mapper.route_source_locations = true`, call `Rails.application.reload_routes!`, iterate `Rails.application.routes.routes`. `source_location` is a `"path:line"` string on `ActionDispatch::Journey::Route` (verified in actionpack 8.1.4, `journey/route.rb:10`); split on the last colon. `verb` from `route.verb`, `path` from `route.path.spec.to_s` with the `(.:format)` suffix removed, `controller`/`action` from `route.defaults`.
+Set `ActionDispatch::Routing::Mapper.route_source_locations = true`, call `Rails.application.reload_routes!`, iterate `Rails.application.routes.routes`. `source_location` is a `"path:line"` string on `ActionDispatch::Journey::Route` (verified in actionpack 8.1.4, `journey/route.rb:10`); split on the last colon. `verb` from `route.verb`, `path` from `route.path.spec.to_s` with the `(.:format)` suffix removed, `controller`/`action` from `route.defaults`. Engine expansion: when `route.app.app` (unwrapping `ActionDispatch::Routing::Mapper::Constraints`) is a class inheriting `Rails::Engine`, recurse into `engine.routes.routes` with the mount path as prefix. Engine routes' source lines also come from `source_location`, which the flag records for engine route files once they are reloaded.
 
 - [ ] **Step 5: Run to verify they pass**
 
@@ -314,7 +328,7 @@ Expected: NameError on the collector.
 
 - [ ] **Step 3: Implement the collector**
 
-`ActionController::Base.descendants + ActionController::API.descendants`, skip anonymous and gem-defined classes (source path outside `RailsVis.root`). Actions from `action_methods`. Filters from `_process_action_callbacks`: `kind`, `filter` (symbols only; procs recorded as `name: "(block)"` with the block's source location), `only`/`except` from the callback's `@if`/`@unless` when they are `ActionController` action-name conditions (best effort; `nil` otherwise). Template lookup: glob `app/views/{controller_path}/{action}.*`. Inertia: `BodyScan#inertia_component` → `{pages_dir}/{component}.tsx` or `.jsx`, whichever exists; neither exists → warning.
+`ActionController::Base.descendants + ActionController::API.descendants`, skip anonymous classes and classes for which `Source.app_code?` is false. Actions from `action_methods`. Filters from `_process_action_callbacks`: `kind`, `filter` (symbols only; procs recorded as `name: "(block)"` with the block's source location), `only`/`except` from the callback's `@if`/`@unless` when they are `ActionController` action-name conditions (best effort; `nil` otherwise). Template lookup: glob `app/views/{controller_path}/{action}.*`. Inertia: `BodyScan#inertia_component` → `{pages_dir}/{component}.tsx` or `.jsx`, whichever exists; neither exists → warning.
 
 - [ ] **Step 4: Run to verify they pass**
 
@@ -359,7 +373,7 @@ Expected: NameError on the collector.
 
 - [ ] **Step 4: Implement the collector**
 
-`ActiveRecord::Base.descendants.reject(&:abstract_class?)`, skip classes outside `RailsVis.root`; `table_exists?` false → warning and skip. Associations via `reflect_on_all_associations` (`macro`, `name`, `class_name`, `options[:dependent]`, `foreign_key`, `options[:through]`). Validations via `validators` (`kind`, `attributes`, `options` minus procs). Callbacks: for each event in `ActiveRecord::Callbacks::CALLBACKS` (activerecord 8.1.4 `callbacks.rb:280`), read `_#{chain}_callbacks` where chain is the part after `before_`/`after_`/`around_`; keep symbol filters defined in the app. Columns via `columns` (`sql_type_metadata.type`), indexes via `connection.indexes(table_name)`. `database` = `connection_db_config.name`.
+`ActiveRecord::Base.descendants.reject(&:abstract_class?)`, skip classes for which `Source.app_code?` is false; `table_exists?` false → warning and skip. Associations via `reflect_on_all_associations` (`macro`, `name`, `class_name`, `options[:dependent]`, `foreign_key`, `options[:through]`). Validations via `validators` (`kind`, `attributes`, `options` minus procs). Callbacks: for each event in `ActiveRecord::Callbacks::CALLBACKS` (activerecord 8.1.4 `callbacks.rb:280`), read `_#{chain}_callbacks` where chain is the part after `before_`/`after_`/`around_`; keep symbol filters defined in the app. Columns via `columns` (`sql_type_metadata.type`), indexes via `connection.indexes(table_name)`. `database` = `connection_db_config.name`.
 
 - [ ] **Step 5: Run to verify they pass**
 
@@ -618,20 +632,29 @@ git add -A && git commit -m "ci: test matrix on SQLite and PostgreSQL, Ruby 3.3 
 - Consumes: `rails_vis:dump` from Task 10, `Repo` from Task 2.
 - Produces: `rake acceptance[target]` where `target` is a key in `acceptance/targets.yml`; writes `tmp/acceptance/<target>/doc/rails_vis/` and a report `tmp/acceptance/<target>.report.json` with `{ "routes", "models", "controllers", "documents", "warnings", "links_checked", "links_ok" }`.
 
-Targets, pinned on 2026-11-03 (both default branches on Rails 8.1):
+Targets, pinned on 2026-11-03 (all default branches on Rails 8.1). Run them in this order; each must pass before the next is attempted:
 
 ```yaml
+spina:                      # first: a small CMS; the whole CMS is an engine mounted at "/" in test/dummy
+  repo: https://github.com/SpinaCMS/Spina
+  sha: 1eb9fa87d4ad559e946df2b1d16c401177233a6a
+  app_dir: test/dummy       # Rails root; the repository root is two levels up, so paths and links must be repo-relative
+  database: sqlite
+  prepare: ["bundle exec rake db:prepare"]
+  floors: { routes: 30, models: 10 }
 lobsters:
   repo: https://github.com/lobsters/lobsters
   sha: 49c06ba923b252b0f075894c3a8796d2e1d0af11
+  app_dir: .
   database: sqlite          # four SQLite databases in development: primary, cache, queue, rack_attack
-  prepare: ["cp config/database.yml.sample config/database.yml", "bin/rails db:prepare"]
+  prepare: ["cp config/database.yml.sample config/database.yml", "bundle exec rake db:prepare"]
   floors: { routes: 50, models: 20 }
 mastodon:
   repo: https://github.com/mastodon/mastodon
   sha: 77a0b36b54162e7395b7d72261af990309ea9fd8
+  app_dir: .
   database: postgres        # primary plus replica (replica: true) with username/password/host fields
-  prepare: ["bin/rails db:prepare"]
+  prepare: ["bundle exec rake db:prepare"]
   env: { RAILS_ENV: development, DB_HOST: localhost, REDIS_URL: "redis://localhost:6379/9" }
   floors: { routes: 300, models: 100 }
 ```
@@ -641,6 +664,7 @@ mastodon:
 `test/acceptance/acceptance_test.rb` (excluded from the default pattern; run only by `rake acceptance`). Reads the report for the target named in `ENV["RAILS_VIS_TARGET"]` and asserts:
 - `routes >= floors.routes`, `models >= floors.models`, `controllers > 0`.
 - `data.json` contains none of the strings from the target's database config secrets: for Mastodon the values of `DB_USER`, `DB_PASS`, `DB_HOST` when set; for both, no key `password`, `username`, `host`, `url` anywhere in `databases`.
+- Spina: every route has `engine == "Spina::Engine"`; `models` include `Spina::Page`; every controller and model `path` starts with `app/` (repository-relative, not `test/dummy/app/`); the route source paths start with `config/` (the engine's routes file at the repository root).
 - Lobsters: `databases` has entries named `primary`, `cache`, `queue`, `rack_attack` for `development`, with `solid_component` `solid_cache` and `solid_queue` on `cache` and `queue`.
 - Mastodon: `databases` has a `development` entry named `replica`.
 - `links_checked == 10` and `links_ok == 10` (see Step 3).
@@ -653,12 +677,14 @@ Expected: FAIL (no report file).
 
 - [ ] **Step 3: Implement `script/acceptance.rb`**
 
-For the target: `git clone --filter=blob:none <repo> tmp/acceptance/<target>` then `git checkout <sha>` (skip clone when the directory exists at that SHA); append `gem "rails_vis", path: "<gem root>"` to the target's `Gemfile` inside `group :development`; `bundle install`; run each `prepare` command with the target's `env`; run `bin/rails rails_vis:dump`; read `data.json` and count. Link check: take the first ten controller action nodes with a non-nil `url`, `GET` each from GitHub and count HTTP 200 as `links_ok`; also fetch the raw file at that SHA and assert the line at `line` contains `def <action>` (this is what proves the permalink points at the right function, spec §7). Write the report. Each shell step prints its command; a non-zero exit aborts with the step name.
+For the target: `git clone --filter=blob:none <repo> tmp/acceptance/<target>` then `git checkout <sha>` (skip clone when the directory exists at that SHA); append `gem "rails_vis", path: "<gem root>"` to the repository-root `Gemfile` inside `group :development`; `bundle install`; then, with the working directory set to `app_dir`, run each `prepare` command with the target's `env`, then `bundle exec rake rails_vis:dump` (rake, not `bin/rails`, because an engine repository's `bin/rails` is the engine CLI, while `test/dummy/Rakefile` loads the app and its tasks); read `data.json` from `<app_dir>/doc/rails_vis/` and count. Link check: take the first ten controller action nodes with a non-nil `url`, `GET` each from GitHub and count HTTP 200 as `links_ok`; also fetch the raw file at that SHA and assert the line at `line` contains `def <action>` (this is what proves the permalink points at the right function, spec §7). Write the report. Each shell step prints its command; a non-zero exit aborts with the step name.
 
-- [ ] **Step 4: Run Lobsters and verify**
+- [ ] **Step 4: Run Spina, then Lobsters, and verify**
 
+Run: `bundle exec rake acceptance[spina]`
+Expected: report written; the acceptance test passes. Open `tmp/acceptance/spina/test/dummy/doc/rails_vis/index.html` and confirm the Request map lists Spina's engine routes, the Domain model shows `Spina::Page`, and a controller link opens the file under `app/controllers/spina/` on GitHub at the right line.
 Run: `bundle exec rake acceptance[lobsters]`
-Expected: report written; the acceptance test passes. Open `tmp/acceptance/lobsters/doc/rails_vis/index.html` and confirm Request map, Domain model and Databases render and that source links open the right line on GitHub.
+Expected: as above; open `tmp/acceptance/lobsters/doc/rails_vis/index.html` and confirm Request map, Domain model and Databases (four databases) render and that source links open the right line on GitHub.
 
 - [ ] **Step 5: Run Mastodon and verify**
 
@@ -670,10 +696,17 @@ Expected: as Step 4. If boot fails for a reason unrelated to the gem (missing se
 Add a `workflow_dispatch` job `acceptance` to `.github/workflows/test.yml` with a `target` input, PostgreSQL 16 and Redis services, running `bundle exec rake acceptance[${{ inputs.target }}]`. It is not triggered on push.
 
 ```bash
-git add -A && git commit -m "test: acceptance run against Lobsters (SQLite) and Mastodon (PostgreSQL) at pinned commits"
+git add -A && git commit -m "test: acceptance run against Spina, Lobsters (SQLite) and Mastodon (PostgreSQL) at pinned commits"
 ```
 
 ---
+
+## Execution policy (owner's instruction, 2026-11-03)
+
+- Subagent-driven: one fresh implementer subagent per task, in its own git worktree (`isolation: "worktree"`), branched from `main`; its branch is merged into `main` on this checkout only after review passes.
+- Implementer model: Opus 5.5 at medium effort for Tasks 3, 5–11 and 14 (Rails reflection, Prism, the viewer); Sonnet 5.5 at medium effort for Tasks 1, 2, 4, 12 and 13 (scaffolding, string building, docs, CI).
+- Verification only on Fable 5.1: the spec-compliance reviewer and the code-quality reviewer for each task, and the whole-branch review at the end. Fable is not used to implement.
+- Each implementer brief carries the task text verbatim plus the Global Constraints and the Interfaces blocks of the tasks it consumes; nothing else from this conversation.
 
 ## Out of scope for this plan (next plan)
 
