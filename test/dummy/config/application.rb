@@ -43,5 +43,9 @@ module Dummy
 
     # Moves Active Storage's gem-drawn routes outside /rails/, as Spina's dummy does.
     config.active_storage.routes_prefix = "/files"
+
+    # Rails 8.1 builds the stack with klass.new, so the middleware is passed as a constant, loaded here before autoloading exists.
+    require_relative "../app/middleware/request_stamp"
+    config.middleware.use RequestStamp
   end
 end

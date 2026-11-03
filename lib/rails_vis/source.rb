@@ -23,9 +23,15 @@ module RailsVis
       gem_roots.any? { |root| real.start_with?(root + File::SEPARATOR) }
     end
 
-    def gem_url(path, repo:)
+    # The loaded spec holding this file. The gem_code? guard matters: a path gem (rails_vis itself) is rooted at the repo.
+    def gem_spec(path, repo:)
+      return unless path && gem_code?(path, repo: repo)
       real = real_path(path, repo)
-      spec = Gem.loaded_specs.values.find { |s| real.start_with?(real_path(s.full_gem_path, repo) + File::SEPARATOR) }
+      Gem.loaded_specs.values.find { |s| real.start_with?(real_path(s.full_gem_path, repo) + File::SEPARATOR) }
+    end
+
+    def gem_url(path, repo:)
+      spec = gem_spec(path, repo: repo)
       return unless spec
       links = DocLinks.gem(spec.name)
       links[:source_code_uri] || links[:homepage] || links[:rubygems]
