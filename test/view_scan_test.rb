@@ -32,6 +32,32 @@ class ViewScanTest < Minitest::Test
     assert_equal [["patient", true, "create"], ["patients", false, "show"]], s.helpers.map { |h| [h["stem"], h["redirect"], h["def"]] }
   end
 
+  def test_button_to_and_form_helpers_read_method
+    s = scan("button_to 'x', patient_path(1), method: :delete\nform_for(@p, url: a_path, method: :PATCH) {}")
+    assert_equal [[true, "delete"], [true, "patch"]], s.helpers.map { |h| [h["form"], h["method"]] }
+  end
+
+  def test_frame_covers_arguments_not_block
+    s = scan("form_with url: x_path, method: :patch do |f|\n  link_to 'c', y_path\nend")
+    assert_equal [["x", true, "patch"], ["y", false, nil]], s.helpers.map { |h| [h["stem"], h["form"], h["method"]] }
+  end
+
+  def test_parenthesised_redirect_with_block
+    s = scan("def create\n  redirect_to(patient_path(1)) { b_path }\nend")
+    assert_equal [["patient", true, "create"], ["b", false, "create"]], s.helpers.map { |h| [h["stem"], h["redirect"], h["def"]] }
+  end
+
+  def test_nested_frames_innermost_method_wins
+    s = scan("form_with url: a_path, method: :patch do |f| end\nform_with(url: link_to('x', b_path, method: :delete), method: :put)")
+    assert_equal ["delete"], s.helpers.last(1).map { |h| h["method"] }
+  end
+
+  def test_parse_error_keeps_earlier_helpers
+    s = scan("patients_path\nif\n")
+    refute_nil s.error
+    assert_equal ["patients"], s.helpers.map { |h| h["stem"] }
+  end
+
   def test_template_wrapper_def_is_nil
     assert_nil scan("def _rails_vis_template\n  patients_path\nend").helpers.first["def"]
   end

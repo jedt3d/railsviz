@@ -50,10 +50,16 @@ module RailsVis
         helper(node) if node.name.match?(HELPER)
         render(node) if node.name == :render && node.receiver.nil?
         frame = frame_for(node)
-        @frames.push(frame) if frame
-        super
-      ensure
-        @frames.pop if frame
+        return super unless frame
+        # the frame covers the arguments only, not the receiver or the block body
+        visit(node.receiver) if node.receiver
+        @frames.push(frame)
+        begin
+          visit(node.arguments) if node.arguments
+        ensure
+          @frames.pop
+        end
+        visit(node.block) if node.block
       end
 
       private
@@ -77,21 +83,21 @@ module RailsVis
       def frame_for(node)
         return unless node.receiver.nil?
         if FORM_CALLS.include?(node.name)
-          [:form, nil]
+          [:form, link_method(node, turbo: false)]
         elsif node.name == :redirect_to
           [:redirect]
         elsif node.name == :link_to
-          verb = link_method(node)
+          verb = link_method(node, turbo: true)
           [:form, verb] if verb
         end
       end
 
       # Downcased literal of `method: :delete` or `data: { turbo_method: :delete }`, or nil.
-      def link_method(node)
+      def link_method(node, turbo:)
         node.arguments&.arguments.to_a.grep(Prism::KeywordHashNode).each do |hash|
           found = pairs(hash)
           value = found["method"]
-          value = pairs(found["data"])["turbo_method"] if value.nil? && found["data"].is_a?(Prism::HashNode)
+          value = pairs(found["data"])["turbo_method"] if turbo && value.nil? && found["data"].is_a?(Prism::HashNode)
           return value.unescaped.downcase if value.is_a?(Prism::SymbolNode) || value.is_a?(Prism::StringNode)
         end
         nil
