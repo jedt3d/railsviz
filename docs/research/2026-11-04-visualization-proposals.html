@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Research deck for RailsVis: how comparable tools on other platforms present a project, what recurs, and which of it RailsVis should adopt, with a live page-flow graph built from Spina.">
+<title>RailsVis visual research</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<script>try { var m = localStorage.getItem("rails_vis_mode"); if (m === "dark" || m === "light") document.documentElement.dataset.mode = m; } catch (e) {}</script>
+<style>
+/* Hallmark · shape: app screen (slide deck) · genre: editorial · theme: Ink (by request, the viewer's own tokens from viewer/src/tokens.css) · redesign: none
+ * nav: a ruled top bar (deck title, slide counter, the mode switch) · signature: the Spina page-flow graph, drawn from real templates, draggable · states: scripting off shows every slide stacked · ink: paper · modes: light+dark · scope: app · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H3 E4 S4 R4 V4 · weakest: H, a deck has no hero; the first slide carries the claim and the one action (the graph) sits three slides in */
+/* Hallmark · waive 37 · two IBM Plex faces, Sans and Mono · the owner's font rule sets IBM Plex for every HTML document */
+/* Hallmark · waive 22 · neutrals carry a 0.003 to 0.012 trace of the blue anchor · copied from the viewer so the deck and the dashboard print alike */
+:root {
+  color-scheme: light dark;
+  --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem; --text-4xl: 2.488rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --dur-micro: 120ms; --dur-short: 220ms;
+  --color-paper: oklch(99.2% 0.003 258); --color-paper-2: oklch(97% 0.005 258); --color-paper-3: oklch(94% 0.007 258);
+  --color-ink: oklch(17% 0.01 258); --color-ink-2: oklch(30% 0.01 258); --color-muted: oklch(46% 0.012 258);
+  --color-rule: oklch(88% 0.008 258); --color-rule-2: oklch(93% 0.006 258);
+  --color-accent: oklch(52% 0.17 258); --color-accent-ink: oklch(99.2% 0.003 258);
+  --color-accent-soft: oklch(94% 0.04 258); --color-accent-soft-ink: oklch(32% 0.11 258);
+  --color-focus: oklch(52% 0.17 258);
+  --color-route: oklch(48% 0.11 200); --color-route-soft: oklch(94% 0.04 200); --color-route-soft-ink: oklch(30% 0.07 200);
+  --color-model: oklch(50% 0.13 150); --color-model-soft: oklch(94% 0.05 150); --color-model-soft-ink: oklch(30% 0.08 150);
+  --color-db: oklch(55% 0.14 45); --color-db-soft: oklch(95% 0.04 45); --color-db-soft-ink: oklch(34% 0.09 45);
+  --color-warn: oklch(62% 0.13 80); --color-warn-soft: oklch(95% 0.06 85); --color-warn-soft-ink: oklch(38% 0.09 70);
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif; --font-display: var(--font-body);
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --radius-card: 12px; --radius-control: 8px; --radius-pill: 999px; --rule-hair: 1px;
+  --tracking-display: -0.02em; --display-weight: 700; --body-weight: 400;
+  --bar-h: 56px; --measure: 68ch;
+}
+[data-mode="dark"] {
+  --color-paper: oklch(15% 0.012 258); --color-paper-2: oklch(18% 0.012 258); --color-paper-3: oklch(21.5% 0.012 258);
+  --color-ink: oklch(94% 0.008 258); --color-ink-2: oklch(84% 0.008 258); --color-muted: oklch(68% 0.012 258);
+  --color-rule: oklch(30% 0.012 258); --color-rule-2: oklch(25% 0.012 258);
+  --color-accent: oklch(72% 0.13 258); --color-accent-ink: oklch(15% 0.012 258);
+  --color-accent-soft: oklch(28% 0.07 258); --color-accent-soft-ink: oklch(88% 0.07 258);
+  --color-focus: oklch(72% 0.13 258);
+  --color-route: oklch(70% 0.09 200); --color-route-soft: oklch(27% 0.05 200); --color-route-soft-ink: oklch(88% 0.06 200);
+  --color-model: oklch(72% 0.11 150); --color-model-soft: oklch(27% 0.06 150); --color-model-soft-ink: oklch(88% 0.08 150);
+  --color-db: oklch(74% 0.11 45); --color-db-soft: oklch(28% 0.05 45); --color-db-soft-ink: oklch(90% 0.06 45);
+  --color-warn: oklch(78% 0.11 80); --color-warn-soft: oklch(28% 0.06 80); --color-warn-soft-ink: oklch(90% 0.09 85);
+  --body-weight: 350;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode]) {
+    --color-paper: oklch(15% 0.012 258); --color-paper-2: oklch(18% 0.012 258); --color-paper-3: oklch(21.5% 0.012 258);
+    --color-ink: oklch(94% 0.008 258); --color-ink-2: oklch(84% 0.008 258); --color-muted: oklch(68% 0.012 258);
+    --color-rule: oklch(30% 0.012 258); --color-rule-2: oklch(25% 0.012 258);
+    --color-accent: oklch(72% 0.13 258); --color-accent-ink: oklch(15% 0.012 258);
+    --color-accent-soft: oklch(28% 0.07 258); --color-accent-soft-ink: oklch(88% 0.07 258);
+    --color-focus: oklch(72% 0.13 258);
+    --color-route: oklch(70% 0.09 200); --color-route-soft: oklch(27% 0.05 200); --color-route-soft-ink: oklch(88% 0.06 200);
+    --color-model: oklch(72% 0.11 150); --color-model-soft: oklch(27% 0.06 150); --color-model-soft-ink: oklch(88% 0.08 150);
+    --color-db: oklch(74% 0.11 45); --color-db-soft: oklch(28% 0.05 45); --color-db-soft-ink: oklch(90% 0.06 45);
+    --color-warn: oklch(78% 0.11 80); --color-warn-soft: oklch(28% 0.06 80); --color-warn-soft-ink: oklch(90% 0.09 85);
+    --body-weight: 350;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { overflow-x: clip; }
+html { -webkit-text-size-adjust: 100%; scrollbar-color: var(--color-rule) var(--color-paper); }
+::selection { background: var(--color-accent-soft); color: var(--color-accent-soft-ink); }
+body { margin: 0; background: var(--color-paper); color: var(--color-ink); font-family: var(--font-body); font-weight: var(--body-weight); font-size: 17px; line-height: 1.55; }
+h1, h2, h3 { text-wrap: balance; font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--tracking-display); line-height: 1.08; margin: 0; overflow-wrap: break-word; min-width: 0; }
+h1 { font-size: var(--text-4xl); } h2 { font-size: var(--text-2xl); } h3 { font-size: var(--text-lg); }
+p { margin: 0; max-width: var(--measure); }
+a { color: var(--color-ink); font-weight: 600; text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
+a:hover { text-decoration-color: var(--color-accent); }
+code { font-family: var(--font-mono); font-size: 0.92em; }
+ul, ol { margin: 0; padding-left: 1.2em; } li { margin-bottom: var(--space-2xs); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: var(--space-sm); min-height: var(--bar-h); padding: var(--space-xs) var(--space-md); background: var(--color-paper); border-bottom: var(--rule-hair) solid var(--color-ink); }
+.brand { font-weight: 700; font-size: var(--text-lg); letter-spacing: var(--tracking-display); white-space: nowrap; }
+.brand-sub { font-weight: var(--body-weight); font-size: var(--text-sm); color: var(--color-muted); letter-spacing: 0; margin-left: var(--space-xs); }
+.counter { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--color-muted); font-size: var(--text-sm); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-xs); min-width: 36px; min-height: 36px; padding: 0 var(--space-sm); border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-control); background: var(--color-paper); color: var(--color-ink-2); font: inherit; font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out); }
+.btn:hover { background: var(--color-paper-2); color: var(--color-ink); } .btn:active { background: var(--color-paper-3); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn--primary { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); } .btn--primary:hover { background: var(--color-ink-2); color: var(--color-paper); }
+.icon { width: 16px; height: 16px; flex: none; }
+.mode .icon-moon { display: none; } [data-mode="dark"] .mode .icon-sun { display: none; } [data-mode="dark"] .mode .icon-moon { display: block; }
+@media (prefers-color-scheme: dark) { :root:not([data-mode]) .mode .icon-sun { display: none; } :root:not([data-mode]) .mode .icon-moon { display: block; } }
+
+.deck { max-width: 1280px; margin: 0 auto; padding: 0 var(--space-lg); }
+.slide { min-height: calc(100dvh - var(--bar-h)); padding: var(--space-xl) 0 var(--space-2xl); border-bottom: var(--rule-hair) solid var(--color-rule); display: grid; align-content: start; gap: var(--space-lg); }
+.js .slide { display: none; border-bottom: 0; } .js .slide.current { display: grid; }
+.slide > header { display: grid; gap: var(--space-xs); }
+.slide > header .kicker { font-size: var(--text-sm); color: var(--color-muted); }
+.lead { font-size: var(--text-lg); color: var(--color-ink-2); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--space-lg); }
+.cols--2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); }
+.well { background: var(--color-paper-2); border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-card); padding: var(--space-md) var(--space-lg); display: grid; gap: var(--space-xs); align-content: start; }
+.well h2, .well h3 { font-size: var(--text-md); }
+.well p, .well li { font-size: var(--text-sm); color: var(--color-ink-2); }
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); border-top: var(--rule-hair) solid var(--color-ink); }
+th, td { text-align: left; vertical-align: top; padding: var(--space-xs) var(--space-sm) var(--space-xs) 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
+th { font-weight: 600; color: var(--color-ink-2); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.tag { display: inline-flex; align-items: center; padding: 1px var(--space-xs); border-radius: var(--radius-pill); font-size: var(--text-xs); font-weight: 600; background: var(--color-paper-3); color: var(--color-ink-2); white-space: nowrap; }
+.tag--route { background: var(--color-route-soft); color: var(--color-route-soft-ink); }
+.tag--model { background: var(--color-model-soft); color: var(--color-model-soft-ink); }
+.tag--db { background: var(--color-db-soft); color: var(--color-db-soft-ink); }
+.tag--warn { background: var(--color-warn-soft); color: var(--color-warn-soft-ink); }
+.tag--accent { background: var(--color-accent-soft); color: var(--color-accent-soft-ink); }
+.tag--out { background: transparent; box-shadow: inset 0 0 0 var(--rule-hair) var(--color-rule); color: var(--color-muted); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--space-sm); margin: 0; }
+.stat { background: var(--color-paper-2); border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-card); padding: var(--space-sm) var(--space-md); }
+.stat dt { font-size: var(--text-sm); color: var(--color-muted); } .stat dd { margin: 0; font-size: var(--text-2xl); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: var(--tracking-display); }
+.bars { display: grid; gap: var(--space-2xs); max-width: 44rem; }
+.bar { display: grid; grid-template-columns: 11rem minmax(0, 1fr) 5rem; gap: var(--space-sm); align-items: center; font-size: var(--text-sm); }
+.bar .track { height: 14px; background: var(--color-paper-3); border-radius: 3px; overflow: clip; } .bar .fill { height: 100%; background: var(--color-ink-2); }
+.bar.hot .fill { background: var(--color-accent); }
+.bar .val { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.nav-foot { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }
+.toc { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--space-2xs) var(--space-lg); counter-reset: slide; }
+.toc li { counter-increment: slide; display: flex; gap: var(--space-sm); padding: var(--space-xs) 0; border-bottom: var(--rule-hair) solid var(--color-rule-2); }
+.toc li::before { content: counter(slide, decimal-leading-zero); font-family: var(--font-mono); color: var(--color-muted); font-size: var(--text-sm); padding-top: 2px; }
+.toc a { text-decoration: none; } .toc a:hover { text-decoration: underline; }
+.q { border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper-2); padding: var(--space-sm) var(--space-md); max-width: none; }
+.mini { font-size: var(--text-sm); color: var(--color-muted); }
+
+/* the page-flow graph */
+.flow { position: relative; border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); overflow: clip; }
+.flow > svg { display: block; width: 100%; height: min(62dvh, 640px); touch-action: none; cursor: grab; }
+.flow > svg.dragging { cursor: grabbing; }
+.flow .edge { fill: none; stroke: var(--color-ink-2); stroke-width: 1.2; opacity: 0.55; marker-end: url(#arrow); }
+.flow .edge.dim { opacity: 0.08; }
+.flow .edge.hot { opacity: 1; stroke: var(--color-accent); stroke-width: 1.6; }
+.flow .node rect { fill: var(--color-paper-2); stroke: var(--color-ink); stroke-width: 1; rx: 6; }
+.flow .node text { font-family: var(--font-mono); font-size: 11px; fill: var(--color-ink); pointer-events: none; }
+.flow .node.dim { opacity: 0.25; }
+.flow .node.sel rect { fill: var(--color-accent-soft); stroke: var(--color-accent); stroke-width: 1.6; }
+.flow .node:focus-visible { outline: none; } .flow .node:focus-visible rect { stroke: var(--color-focus); stroke-width: 2; }
+.flow .node.orphan rect { stroke-dasharray: 3 3; stroke: var(--color-muted); }
+.flow .hud { position: absolute; left: var(--space-sm); top: var(--space-sm); font-size: var(--text-sm); color: var(--color-ink-2); background: var(--color-paper); border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-control); padding: var(--space-xs) var(--space-sm); max-width: min(34rem, calc(100% - 2 * var(--space-sm))); }
+.flow .hud code { font-size: var(--text-xs); }
+.flow .tools { position: absolute; right: var(--space-sm); top: var(--space-sm); display: flex; gap: var(--space-2xs); }
+
+@media (max-width: 720px) {
+  body { font-size: 16px; } h1 { font-size: var(--text-3xl); }
+  .deck { padding: 0 var(--space-md); }
+  .bar { grid-template-columns: 7rem minmax(0, 1fr) 4rem; }
+  .brand-sub { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+</head>
+<body>
+<svg hidden aria-hidden="true" focusable="false">
+  <symbol id="i-sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.75A6 6 0 0 1 6.25 2.5a6 6 0 1 0 7.25 7.25z"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5 5.5 8 10 12.5"/></symbol>
+  <symbol id="i-next" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 3.5 4.5 4.5L6 12.5"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/><rect x="5.5" y="5.5" width="5" height="5" rx="1"/></symbol>
+</svg>
+<header class="topbar">
+  <span class="brand">rails_vis<span class="brand-sub">visual research, 4 Nov 2026</span></span>
+  <span class="counter" id="counter" aria-live="polite"></span>
+  <button class="btn" id="prev" type="button" aria-label="Previous slide"><svg class="icon" aria-hidden="true"><use href="#i-prev"/></svg></button>
+  <button class="btn" id="next" type="button" aria-label="Next slide"><svg class="icon" aria-hidden="true"><use href="#i-next"/></svg></button>
+  <button id="mode" class="btn mode" type="button" aria-label="Switch to dark mode" aria-pressed="false"><svg class="icon icon-sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon icon-moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+</header>
+<main class="deck" id="deck">
+
+<section class="slide" id="s-title" aria-labelledby="h-title">
+  <header>
+    <h1 id="h-title">Show the app as a map, not only as a ledger</h1>
+    <p class="lead">What project-visualisation tools on other platforms do on their first screen, what recurs across them, and the three additions RailsVis can derive from code without a new runtime dependency.</p>
+  </header>
+  <div class="cols">
+    <div class="well"><h2>Where we can improve</h2><p>The first screen counts things; it does not yet show how they connect. No view answers “which page leads where”.</p></div>
+    <div class="well"><h2>What to expect</h2><p>A page-flow view, a start screen that reads as a map, and an inventory of templates and view components, each row still a source line.</p></div>
+    <div class="well"><h2>Why it fits Rails</h2><p>Named routes are the link language of every template and redirect. Reflection plus one Prism pass yields the graph; nothing is hand-maintained.</p></div>
+  </div>
+  <p class="mini">Use the arrow keys or the buttons above. Every figure in this deck comes from the repository or the Spina acceptance dump; links go to the sources.</p>
+</section>
+
+<section class="slide" id="s-toc" aria-labelledby="h-toc">
+  <header><h2 id="h-toc">Contents</h2></header>
+  <ol class="toc" id="toc"></ol>
+</section>
+
+<section class="slide" id="s-now" aria-labelledby="h-now">
+  <header>
+    <h2 id="h-now">Where we are: nine views, one diagram, every row a source line</h2>
+    <p class="lead">The viewer today is a ledger with one entity diagram. That is the right floor; it is not yet a map.</p>
+  </header>
+  <table>
+    <thead><tr><th>View</th><th>Form</th><th>Diagram</th><th>What a newcomer still cannot see</th></tr></thead>
+    <tbody>
+      <tr><td>Start here</td><td>7 stat tiles, routes per controller, models per database, reading list</td><td>none</td><td>Where to enter the app and how its parts hang together</td></tr>
+      <tr><td>Request map</td><td>Routes grouped by controller; a row opens filters, models, view, source</td><td>none</td><td>Which page leads to which page</td></tr>
+      <tr><td>Domain model</td><td>Chips, one section per model</td><td>Mermaid erDiagram, belongs_to only</td><td>A model’s neighbourhood without reading the whole diagram</td></tr>
+      <tr><td>Databases, Boot, Middleware, Entry points, Gems, Documents</td><td>Tables and bar charts</td><td>none</td><td>Fine as ledgers; nothing to add in this wave</td></tr>
+    </tbody>
+  </table>
+  <div class="cols--2 cols">
+    <div class="well"><h3>Payload</h3>
+      <div class="bars">
+        <div class="bar hot"><span>mermaid.min.js</span><div class="track"><div class="fill" style="width:93.6%"></div></div><span class="val">5.49 MB</span></div>
+        <div class="bar"><span>marked.min.js</span><div class="track"><div class="fill" style="width:0.8%"></div></div><span class="val">48 KB</span></div>
+        <div class="bar"><span>viewer/index.html</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="val">5.87 MB</span></div>
+      </div>
+      <p>Mermaid is 94% of the viewer. The spec rejected a second graph library because it “would double the payload”; the node-graph question has to answer that first.</p></div>
+    <div class="well"><h3>Already in data.json</h3>
+      <ul><li><code>routes[].name</code>: the route helper stem, the link language of templates</li><li><code>controllers[].actions[].view</code>: template or Inertia page per action</li><li><code>actions[].models</code>: constants the action body touches, by Prism</li><li>Nothing yet links one page to another</li></ul></div>
+  </div>
+</section>
+
+<section class="slide" id="s-patterns" aria-labelledby="h-patterns">
+  <header>
+    <h2 id="h-patterns">What recurs elsewhere: eight patterns, each with the tool that proves it</h2>
+    <p class="lead">About 45 tools read from their own docs and manifests. The full list with a URL per claim is in the source notes beside this deck.</p>
+  </header>
+  <div class="cols">
+    <div class="well"><h3>Entry point first</h3><p>Sourcetrail centres the graph on the selected symbol and shows only its in and out edges. Nx focuses one project. Android’s Navigation Editor is organised around a start destination.</p></div>
+    <div class="well"><h3>Counts that are links</h3><p>pkg.go.dev’s “known importing packages”, Laravel Pulse’s queue card, Sourcetrail’s member counts. RailsVis already does this on Start here.</p></div>
+    <div class="well"><h3>Colour means kind, never decoration</h3><p>Sourcetrail by symbol kind, Madge by dependency state, Swagger UI’s method badges. RailsVis already has the four review roles and the verb pills.</p></div>
+    <div class="well"><h3>Click a node, land on code</h3><p>Sourcetrail, Nx (“click any dependency line to find which file created it”), dependency-cruiser, NDepend, Mermaid’s click binding. Our rows do this; our diagram nodes do not yet.</p></div>
+    <div class="well"><h3>Focus with a depth control</h3><p>Sourcetrail’s depth slider, Nx proximity, code2flow upstream and downstream depth, Backstage maxDepth, Azimutt find-path.</p></div>
+    <div class="well"><h3>Collapse by folder or namespace</h3><p>The universal scaling trick: dependency-cruiser archi, Nx group by folder, rails-erd cluster, Mermaid subgraphs that collapse to one node.</p></div>
+    <div class="well"><h3>Hover highlights, click pins</h3><p>dependency-cruiser’s dot-webpage and NDepend do this on a static SVG. It gives most of the felt interactivity of a graph library without one.</p></div>
+    <div class="well"><h3>The page-flow convention</h3><p>Screens as nodes, actions as labelled arrows, the start marked, a nested flow drawn as one node: Android, Xcode segues, FigJam and Miro user-flow templates.</p></div>
+  </div>
+</section>
+
+<section class="slide" id="s-first" aria-labelledby="h-first">
+  <header>
+    <h2 id="h-first">Why their first screens read at once</h2>
+    <p class="lead">Each one makes a single decision about what to show first, and hides the rest behind one control.</p>
+  </header>
+  <table>
+    <thead><tr><th>Tool</th><th>The first screen</th><th>The one decision</th></tr></thead>
+    <tbody>
+      <tr><td>Nx graph</td><td>One project focused, its neighbours at a chosen depth, everything else absent</td><td>Absence: nothing unrelated is drawn</td></tr>
+      <tr><td>Sourcetrail</td><td>Search, graph and code panes that all show the same selected symbol</td><td>One selection, three views</td></tr>
+      <tr><td>Laravel Pulse</td><td>A fixed grid of cards, each a count with its worst offenders listed under it</td><td>Counts first, detail under them</td></tr>
+      <tr><td>Swagger UI</td><td>One row per operation, a coloured badge first, grouped by tag, collapsed</td><td>A badge in column one</td></tr>
+      <tr><td>Android Navigation Editor</td><td>Destinations as screen previews with arrows between them and a start marked</td><td>Screens are the nodes</td></tr>
+      <tr><td>SchemaSpy</td><td>An entity diagram from foreign keys plus a separate list of anomalies and orphans</td><td>Problems listed apart from the picture</td></tr>
+    </tbody>
+  </table>
+  <p class="mini">RailsVis makes the counts decision already. It has not yet made the absence decision (focus) or the screens-are-nodes decision (page flow).</p>
+</section>
+
+<section class="slide" id="s-examples" aria-labelledby="h-examples">
+  <header>
+    <h2 id="h-examples">Examples to review, open source unless marked</h2>
+  </header>
+  <table>
+    <thead><tr><th>Tool</th><th>Why open it</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://nx.dev/docs/features/explore-graph" target="_blank" rel="noopener">Nx graph</a> <span class="tag tag--out">MIT</span></td><td>Focus, proximity depth, group by folder, trace path; built on Cytoscape.js and cytoscape-dagre</td></tr>
+      <tr><td><a href="https://developer.android.com/guide/navigation/design/editor" target="_blank" rel="noopener">Android Navigation Editor</a></td><td>The canonical page-flow node editor: destinations, actions as arrows, nested graphs as one node</td></tr>
+      <tr><td><a href="https://github.com/CoatiSoftware/Sourcetrail/blob/master/DOCUMENTATION.md" target="_blank" rel="noopener">Sourcetrail</a> <span class="tag tag--out">GPL-3.0, archived</span></td><td>Entry-point-first graph with bundled edges, member counts and a depth slider</td></tr>
+      <tr><td><a href="https://github.com/sverweij/dependency-cruiser/blob/main/doc/cli.md" target="_blank" rel="noopener">dependency-cruiser dot-webpage</a> <span class="tag tag--out">MIT</span></td><td>Hover-highlight and click-to-pin on a static SVG; collapse by folder; links to source</td></tr>
+      <tr><td><a href="https://schemaspy.readthedocs.io/en/latest/features.html" target="_blank" rel="noopener">SchemaSpy</a> <span class="tag tag--out">LGPL-3.0</span></td><td>Static HTML schema report that knows Rails naming conventions; anomalies listed apart</td></tr>
+      <tr><td><a href="https://azimutt.app/features" target="_blank" rel="noopener">Azimutt</a> <span class="tag tag--out">MIT</span></td><td>Start from one table and walk its relations; find-path between two tables</td></tr>
+      <tr><td><a href="https://github.com/swagger-api/swagger-ui" target="_blank" rel="noopener">Swagger UI</a> <span class="tag tag--out">Apache-2.0</span></td><td>Method badges, tag grouping, collapsed by default</td></tr>
+      <tr><td><a href="https://laravel.com/docs/12.x/pulse" target="_blank" rel="noopener">Laravel Pulse</a> <span class="tag tag--out">MIT</span></td><td>A first screen as a grid of count cards with the worst offenders under each</td></tr>
+      <tr><td><a href="https://github.com/backstage/backstage/blob/master/plugins/catalog-graph/README.md" target="_blank" rel="noopener">Backstage catalog-graph</a> <span class="tag tag--out">Apache-2.0</span></td><td>Relations graph with maxDepth, unidirectional and onNodeClick, drawn with dagre and d3</td></tr>
+      <tr><td><a href="https://github.com/glato/emerge" target="_blank" rel="noopener">emerge</a> <span class="tag tag--out">MIT</span></td><td>Self-contained static app; force graph on canvas with cluster hulls</td></tr>
+      <tr><td><a href="https://storybook.js.org/docs/writing-stories/naming-components-and-hierarchy" target="_blank" rel="noopener">Storybook hierarchy</a></td><td>A catalogue tree from slash-separated titles, single children hoisted; the model for a components inventory</td></tr>
+      <tr><td><a href="https://starlight.astro.build/components/cards/" target="_blank" rel="noopener">Starlight card grids</a> <span class="tag tag--out">MIT</span></td><td>An entry page as a grid of cards that each open a section; the model for Start here as a map</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="slide" id="s-improve" aria-labelledby="h-improve">
+  <header>
+    <h2 id="h-improve">Where we can improve: four gaps, read against what recurs elsewhere</h2>
+  </header>
+  <table>
+    <thead><tr><th>Gap in RailsVis</th><th>The recurring answer elsewhere</th><th>Proposal</th></tr></thead>
+    <tbody>
+      <tr><td>Start here counts things but does not orient</td><td>Entry-point-first overviews: the first screen names where requests, jobs and people enter, then the busiest paths</td><td>A: Start here as a map</td></tr>
+      <tr><td>No view shows page-to-page movement</td><td>Navigation graphs: screens as nodes, actions as arrows, click a node to open its source</td><td>B: Page flow view</td></tr>
+      <tr><td>Templates, partials, layouts and view components are invisible unless an action resolves one</td><td>Component catalogues: an inventory grouped by folder with who renders what</td><td>C: Templates and components inventory</td></tr>
+      <tr><td>The entity diagram is all-or-nothing</td><td>Focus mode: pick a node, see one or two hops, dim the rest</td><td>D: Neighbourhood focus on the domain diagram</td></tr>
+    </tbody>
+  </table>
+  <p class="mini">A to C are new data plus a view; D is viewer-only on data that already exists. The next slides take B first because it is the one the research argues for most strongly.</p>
+</section>
+
+<section class="slide" id="s-flow-data" aria-labelledby="h-flow-data">
+  <header>
+    <h2 id="h-flow-data">Page flow: what the code can yield, measured on Spina</h2>
+    <p class="lead">Compile each template with Rails’ own ERB handler, parse it with Prism, keep every <code>*_path</code> and <code>*_url</code> call whose stem is a named route. Redirects in write actions give the landing edge.</p>
+  </header>
+  <dl class="stats">
+    <div class="stat"><dt>Pages (GET with a template)</dt><dd>37</dd></div>
+    <div class="stat"><dt>Page to page links</dt><dd>20</dd></div>
+    <div class="stat"><dt>Page to write action</dt><dd>14</dd></div>
+    <div class="stat"><dt>Redirect landings</dt><dd>16</dd></div>
+    <div class="stat"><dt>Pages with no inbound link</dt><dd>22</dd></div>
+  </dl>
+  <div class="cols--2 cols">
+    <div class="well"><h3>Why 22 orphans, and the fix</h3>
+      <p>Spina’s admin navigation lives in a layout partial (10 helper calls) and in Ruby view components (10 files). The spike attributes neither to a page. The collector would treat layout links as a global-nav hub and scan <code>app/components</code> with the same pass.</p></div>
+    <div class="well"><h3>What is derived, what is deferred</h3>
+      <ul><li>Derived: verb, path, template, filters, models, redirect target, jobs and mailers the action names</li><li>Deferred: string-built paths, Turbo or JavaScript navigation, Inertia client links (a TSX scan later)</li><li>A sentence about what a page does is authored, never derived</li></ul></div>
+  </div>
+  <p class="mini">Dependencies needed: none. <code>action_view</code> and <code>prism</code> are already in the bundle. Plain Erubi was not enough: it emits invalid Ruby for <code>&lt;%= link_to … do %&gt;</code>, which is why the first spike found nothing.</p>
+</section>
+
+<section class="slide" id="s-flow-demo" aria-labelledby="h-flow-demo">
+  <header>
+    <h2 id="h-flow-demo">Page flow, live: the Spina admin as a node graph from real templates</h2>
+    <p class="lead">Drag a page. Click one to light its neighbours. Double-click to open the template at the commit. Dashed pages have no inbound link in a template.</p>
+  </header>
+  <div class="flow" id="flow"></div>
+  <p class="mini">No library: an inline spring layout in about 30 lines of script. A layered layout (dagre or ELK) would rank pages left to right; that is the one thing this sketch does not show.</p>
+</section>
+
+<section class="slide" id="s-node" aria-labelledby="h-node">
+  <header>
+    <h2 id="h-node">Node graph that rearranges: four ways to get one, sized against what we ship</h2>
+    <p class="lead">Uncompressed bytes from jsDelivr on 4 Nov 2026. The bar is what each option adds to the 5.87 MB viewer.</p>
+  </header>
+  <div class="bars">
+    <div class="bar hot"><span>Mermaid flowchart, vendored</span><div class="track"><div class="fill" style="width:0.2%"></div></div><span class="val">0 KB</span></div>
+    <div class="bar hot"><span>plus SVG hover and pin</span><div class="track"><div class="fill" style="width:0.2%"></div></div><span class="val">~60 lines</span></div>
+    <div class="bar"><span>d3-force, drag, zoom</span><div class="track"><div class="fill" style="width:2.2%"></div></div><span class="val">~35 KB</span></div>
+    <div class="bar"><span>Cytoscape.js + dagre</span><div class="track"><div class="fill" style="width:29%"></div></div><span class="val">~470 KB</span></div>
+    <div class="bar"><span>G6</span><div class="track"><div class="fill" style="width:84%"></div></div><span class="val">1.35 MB</span></div>
+    <div class="bar"><span>ELK.js alone</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="val">1.59 MB</span></div>
+  </div>
+  <div class="cols">
+    <div class="well"><h3>Recommended: Mermaid plus post-processing</h3><p>Mermaid 12 already bundles ELK, so a layered left-to-right flow is paid for. Add click bindings to templates, subgraphs per controller namespace that collapse, and hover-highlight with click-to-pin on the SVG the viewer already wraps. One visual language for both diagrams.</p></div>
+    <div class="well"><h3>What it cannot do</h3><p>Drag nodes by hand. If that turns out to matter after use, Cytoscape.js with cytoscape-dagre is the stack Nx ships for a static page, at 8% of today’s payload. d3-force is cheaper but draws a cloud, the wrong shape for a flow.</p></div>
+    <div class="well"><h3>Ruled out</h3><p>React Flow needs React. GoJS is commercial. JointJS keeps its layouts in the paid tier. vis-network, G6, Sigma.js and ELK.js alone cost more than a megabyte each for nothing Mermaid lacks.</p></div>
+  </div>
+  <p class="mini">The live demo two slides back is the own-layout sketch, there so the idea can be judged by handling it; it is not the proposed implementation.</p>
+</section>
+
+<section class="slide" id="s-start" aria-labelledby="h-start">
+  <header>
+    <h2 id="h-start">Start here as a map: lead with where the app is entered, then with what is busiest</h2>
+  </header>
+  <div class="cols">
+    <div class="well"><h3>Entry points first</h3><p>One row per way in, each with a count and a link: the root route and its page, the sign-in page when one exists, jobs and their queue, recurring tasks, mailers, channels. All of it is already collected.</p></div>
+    <div class="well"><h3>The busiest paths</h3><p>Keep the routes-per-controller bars, and add the three pages with the most outbound links from Proposal B. “Busiest” means most connected, not most visited: nothing is measured at runtime.</p></div>
+    <div class="well"><h3>A thumbnail of each map</h3><p>Small static versions of the page flow and the domain diagram that open the full view. The first screen then says “this is the shape” before it says “here are the counts”.</p></div>
+  </div>
+  <p class="mini">Nothing on this screen is invented: every tile is a count of rows that exist in data.json, and every tile links to those rows.</p>
+</section>
+
+<section class="slide" id="s-components" aria-labelledby="h-components">
+  <header>
+    <h2 id="h-components">Templates and components: an inventory of what renders, grouped the way app/views is</h2>
+  </header>
+  <table>
+    <thead><tr><th>Kind</th><th>Found how</th><th>Row shows</th></tr></thead>
+    <tbody>
+      <tr><td>Template</td><td>The controller’s own view paths, not a glob under the app root</td><td>Controller, action, format, partials it renders, pages it links to</td></tr>
+      <tr><td>Partial</td><td><code>render</code> calls resolved one level, as in the spike</td><td>Who renders it, how many times</td></tr>
+      <tr><td>Layout</td><td><code>app/views/layouts</code> plus <code>layout</code> declarations on controllers</td><td>Controllers that use it, its global links</td></tr>
+      <tr><td>View component</td><td>Descendants of <code>ViewComponent::Base</code> when the gem is loaded</td><td>Source line, who renders it, links it emits</td></tr>
+      <tr><td>Inertia page</td><td>Already resolved under <code>pages_dir</code></td><td>Action that renders it</td></tr>
+    </tbody>
+  </table>
+  <p class="q">Prerequisite defect: the controllers collector globs <code>app/views</code> under the app root, so an engine like Spina resolves 0 of 391 views. Resolving through the controller’s view paths is the reflect-not-parse rule applied to views, and page flow depends on it.</p>
+</section>
+
+<section class="slide" id="s-outcome" aria-labelledby="h-outcome">
+  <header>
+    <h2 id="h-outcome">Expected outcome: three more questions a newcomer answers from the dashboard alone</h2>
+  </header>
+  <div class="cols">
+    <div class="well"><h3>“How do I get to that screen?”</h3><p>Page flow: pick the page, read its inbound links, follow them back to the entry page. Today this takes a grep for the route helper.</p></div>
+    <div class="well"><h3>“What happens after I submit?”</h3><p>The write action’s redirect landing is an edge in the same graph, so the create-then-show loop is visible without opening the controller.</p></div>
+    <div class="well"><h3>“Where does this partial get used?”</h3><p>The inventory lists renderers per partial and per component, which is the first thing a reviewer checks before changing one.</p></div>
+  </div>
+  <div class="cols--2 cols">
+    <div class="well"><h3>What stays true</h3><ul><li>One static HTML file, no server, no network at view time</li><li>Every node is still a file and line at a commit</li><li>Failing nodes become warnings, never an abort</li></ul></div>
+    <div class="well"><h3>What it costs</h3><ul><li>One collector (pages and links) and one view</li><li>A template-resolution fix that engines need anyway</li><li>If a node-graph library is adopted: its size, decided on the next slide’s numbers</li></ul></div>
+  </div>
+</section>
+
+<section class="slide" id="s-why-rails" aria-labelledby="h-why-rails">
+  <header>
+    <h2 id="h-why-rails">Why it suits Rails review: convention makes the graph cheap, and reflection makes it honest</h2>
+  </header>
+  <div class="cols">
+    <div class="well"><h3>Named routes are the link language</h3><p>Every <code>link_to</code>, <code>form_with</code>, <code>button_to</code> and <code>redirect_to</code> in idiomatic Rails names a route helper. The route name is already in data.json, so one Prism pass over compiled templates resolves most edges with no heuristics.</p></div>
+    <div class="well"><h3>The app is booted, not guessed</h3><p>Routes, view paths, engines and components come from the live application, so engine views, custom inflections and mounted routes resolve the way Rails resolves them.</p></div>
+    <div class="well"><h3>Reviews start from flow</h3><p>A Rails review of a feature reads the route, the action, the redirect and the template in that order. The page-flow view is that reading order drawn once, for the whole app.</p></div>
+  </div>
+  <p class="mini">Where other stacks need a build step or a runtime tracer for this picture, Rails gives it from conventions plus the booted app, which is what RailsVis already does for routes and models.</p>
+</section>
+
+<section class="slide" id="s-decide" aria-labelledby="h-decide">
+  <header>
+    <h2 id="h-decide">To decide: four calls that are yours</h2>
+  </header>
+  <ol>
+    <li><strong>Order.</strong> B (page flow) first, then the view-path fix it needs, then A and C? Or A first because it changes the first screen?</li>
+    <li><strong>Node graph engine.</strong> Keep Mermaid for both diagrams, or add a small graph library for the page flow so nodes can be dragged and focused. The sizes are on the node-graph slide, and the recommendation is to stay on Mermaid.</li>
+    <li><strong>Scope of links.</strong> Templates and partials only, or also view components and layouts in the first cut.</li>
+    <li><strong>Inertia.</strong> Defer the TSX link scan, or include a minimal <code>&lt;Link href&gt;</code> pass now so Inertia apps are not blank in the flow.</li>
+  </ol>
+  <p class="mini">The written research with every source is at <code>docs/research/2026-11-04-visualization-landscape.md</code>.</p>
+</section>
+
+</main>
+<script id="flow-data" type="application/json">{"nodes":[{"id":"admin_root","path":"/admin","template":"app/views/spina/admin/pages/index.html.erb"},{"id":"edit_admin_account","path":"/admin/account/edit","template":"app/views/spina/admin/accounts/edit.html.erb"},{"id":"edit_admin_theme","path":"/admin/theme/edit","template":"app/views/spina/admin/theme/edit.html.erb"},{"id":"admin_edit_settings","path":"/admin/settings/:plugin","template":"app/views/spina/admin/settings/edit.html.erb"},{"id":"admin_users","path":"/admin/users","template":"app/views/spina/admin/users/index.html.erb"},{"id":"new_admin_user","path":"/admin/users/new","template":"app/views/spina/admin/users/new.html.erb"},{"id":"edit_admin_user","path":"/admin/users/:id/edit","template":"app/views/spina/admin/users/edit.html.erb"},{"id":"new_admin_session","path":"/admin/sessions/new","template":"app/views/spina/admin/sessions/new.html.erb"},{"id":"new_admin_password_reset","path":"/admin/password_resets/new","template":"app/views/spina/admin/password_resets/new.html.erb"},{"id":"edit_admin_password_reset","path":"/admin/password_resets/:id/edit","template":"app/views/spina/admin/password_resets/edit.html.erb"},{"id":"edit_content_admin_page","path":"/admin/pages/:id/edit_content","template":"app/views/spina/admin/pages/edit_content.html.erb"},{"id":"edit_template_admin_page","path":"/admin/pages/:id/edit_template","template":"app/views/spina/admin/pages/edit_template.html.erb"},{"id":"children_admin_page","path":"/admin/pages/:id/children","template":"app/views/spina/admin/pages/children.html.erb"},{"id":"new_admin_page_move","path":"/admin/pages/:page_id/move/new","template":"app/views/spina/admin/move_pages/new.html.erb"},{"id":"new_admin_page","path":"/admin/pages/new","template":"app/views/spina/admin/pages/new.html.erb"},{"id":"edit_admin_page","path":"/admin/pages/:id/edit","template":"app/views/spina/admin/pages/edit.html.erb"},{"id":"admin_page_select_options","path":"/admin/page_select_options","template":"app/views/spina/admin/page_select_options/index.html.erb"},{"id":"admin_page_select_option","path":"/admin/page_select_options/:id","template":"app/views/spina/admin/page_select_options/show.html.erb"},{"id":"admin_resource_select_options","path":"/admin/resource_select_options","template":"app/views/spina/admin/resource_select_options/index.html.erb"},{"id":"admin_resource_select_option","path":"/admin/resource_select_options/:id","template":"app/views/spina/admin/resource_select_options/show.html.erb"},{"id":"admin_parent_pages","path":"/admin/parent_pages","template":"app/views/spina/admin/parent_pages/index.html.erb"},{"id":"edit_admin_layout","path":"/admin/layout/edit","template":"app/views/spina/admin/layout/edit.html.erb"},{"id":"edit_admin_resource","path":"/admin/resources/:id/edit","template":"app/views/spina/admin/resources/edit.html.erb"},{"id":"new_admin_navigation_navigation_item","path":"/admin/navigations/:navigation_id/navigation_items/new","template":"app/views/spina/admin/navigation_items/new.html.erb"},{"id":"edit_admin_navigation_navigation_item","path":"/admin/navigations/:navigation_id/navigation_items/:id/edit","template":"app/views/spina/admin/navigation_items/edit.html.erb"},{"id":"admin_navigations","path":"/admin/navigations","template":"app/views/spina/admin/navigations/index.html.erb"},{"id":"edit_admin_navigation","path":"/admin/navigations/:id/edit","template":"app/views/spina/admin/navigations/edit.html.erb"},{"id":"admin_attachments","path":"/admin/attachments","template":"app/views/spina/admin/attachments/index.html.erb"},{"id":"edit_admin_attachment","path":"/admin/attachments/:id/edit","template":"app/views/spina/admin/attachments/edit.html.erb"},{"id":"admin_attachment","path":"/admin/attachments/:id","template":"app/views/spina/admin/attachments/show.html.erb"},{"id":"admin_media_folder_images","path":"/admin/media_folders/:media_folder_id/images","template":"app/views/spina/admin/images/index.html.erb"},{"id":"edit_admin_media_folder_image","path":"/admin/media_folders/:media_folder_id/images/:id/edit","template":"app/views/spina/admin/images/edit.html.erb"},{"id":"admin_media_folder_image","path":"/admin/media_folders/:media_folder_id/images/:id","template":"app/views/spina/admin/images/show.html.erb"},{"id":"new_admin_media_folder","path":"/admin/media_folders/new","template":"app/views/spina/admin/media_folders/new.html.erb"},{"id":"edit_admin_media_folder","path":"/admin/media_folders/:id/edit","template":"app/views/spina/admin/media_folders/edit.html.erb"},{"id":"admin_media_picker","path":"/admin/media_picker","template":"app/views/spina/admin/media_picker/show.html.erb"},{"id":"new_admin_embed","path":"/admin/embeds/new","template":"app/views/spina/admin/embeds/new.html.erb"}],"links":[["admin_root","admin_root"],["admin_root","edit_admin_resource"],["admin_users","new_admin_user"],["admin_users","edit_admin_user"],["new_admin_session","new_admin_password_reset"],["new_admin_password_reset","new_admin_session"],["new_admin_page","admin_root"],["new_admin_navigation_navigation_item","new_admin_navigation_navigation_item"],["edit_admin_navigation_navigation_item","new_admin_navigation_navigation_item"],["edit_admin_navigation","new_admin_navigation_navigation_item"],["edit_admin_navigation","edit_admin_navigation"],["admin_attachments","admin_attachments"],["admin_attachments","admin_media_folder_images"],["edit_admin_attachment","admin_attachment"],["admin_media_folder_images","admin_media_folder_images"],["admin_media_folder_images","admin_attachments"],["admin_media_folder_images","edit_admin_media_folder"],["admin_media_folder_images","new_admin_media_folder"],["edit_admin_media_folder_image","admin_media_folder_image"],["new_admin_embed","new_admin_embed"]],"actions":[["edit_admin_account","admin_account","GET"],["edit_admin_theme","admin_theme","GET"],["admin_edit_settings","admin_settings","PATCH"],["new_admin_user","admin_user","GET"],["edit_admin_user","admin_user","GET"],["new_admin_session","admin_sessions","GET"],["new_admin_password_reset","admin_password_resets","GET"],["edit_admin_password_reset","admin_password_reset","GET"],["edit_template_admin_page","admin_page","GET"],["new_admin_page_move","admin_page_move","GET"],["edit_admin_page","admin_page","GET"],["edit_admin_layout","admin_layout","PATCH"],["edit_admin_navigation","sort_admin_navigation","POST"],["new_admin_embed","admin_embeds","POST"]],"redirects":[["Spina::Admin::AttachmentsController","admin_attachments"],["Spina::Admin::ImagesController","admin_media_picker"],["Spina::Admin::LayoutController","edit_admin_layout"],["Spina::Admin::MediaFoldersController","admin_media_folder_images"],["Spina::Admin::NavigationItemsController","edit_admin_navigation"],["Spina::Admin::NavigationsController","edit_admin_navigation"],["Spina::Admin::PageTranslationsController","edit_admin_page"],["Spina::Admin::PagesController","admin_root"],["Spina::Admin::PagesController","edit_admin_page"],["Spina::Admin::PasswordResetsController","new_admin_session"],["Spina::Admin::PasswordResetsController","new_admin_password_reset"],["Spina::Admin::ResourcesController","admin_root"],["Spina::Admin::SessionsController","admin_root"],["Spina::Admin::SettingsController","admin_edit_settings"],["Spina::Admin::ThemeController","edit_admin_theme"],["Spina::Admin::UsersController","admin_users"]]}</script>
+<script>
+(function () {
+  const root = document.documentElement;
+  const mode = document.getElementById("mode");
+  function syncMode() {
+    const dark = root.dataset.mode === "dark" || (!root.dataset.mode && matchMedia("(prefers-color-scheme: dark)").matches);
+    mode.setAttribute("aria-pressed", String(dark));
+    mode.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+  }
+  mode.addEventListener("click", () => {
+    const dark = root.dataset.mode === "dark" || (!root.dataset.mode && matchMedia("(prefers-color-scheme: dark)").matches);
+    root.dataset.mode = dark ? "light" : "dark";
+    try { localStorage.setItem("rails_vis_mode", root.dataset.mode); } catch (e) {}
+    syncMode();
+  });
+  syncMode();
+
+  // ---------- slides ----------
+  document.body.classList.add("js");
+  const slides = [...document.querySelectorAll(".slide")];
+  const counter = document.getElementById("counter"), prev = document.getElementById("prev"), next = document.getElementById("next");
+  const toc = document.getElementById("toc");
+  for (const s of slides) {
+    if (s.id === "s-toc") continue;
+    const h = s.querySelector("h1, h2");
+    const li = document.createElement("li"), a = document.createElement("a");
+    a.href = "#" + s.id; a.textContent = h ? h.textContent : s.id; li.append(a); toc.append(li);
+  }
+  let i = 0;
+  function show(n, push) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle("current", k === i));
+    counter.textContent = (i + 1) + " / " + slides.length;
+    prev.disabled = i === 0; next.disabled = i === slides.length - 1;
+    if (push !== false) history.replaceState(null, "", "#" + slides[i].id);
+    window.scrollTo(0, 0);
+    if (slides[i].id === "s-flow-demo" && typeof buildFlow === "function") buildFlow();
+  }
+  function fromHash() { const k = slides.findIndex((s) => "#" + s.id === location.hash); show(k < 0 ? 0 : k, false); }
+  prev.addEventListener("click", () => show(i - 1));
+  next.addEventListener("click", () => show(i + 1));
+  window.addEventListener("hashchange", fromHash);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.target.closest("input, textarea, [contenteditable]")) return;
+    if (ev.key === "ArrowRight" || ev.key === "PageDown" || ev.key === " ") { ev.preventDefault(); show(i + 1); }
+    if (ev.key === "ArrowLeft" || ev.key === "PageUp") { ev.preventDefault(); show(i - 1); }
+    if (ev.key === "Home") show(0); if (ev.key === "End") show(slides.length - 1);
+  });
+  fromHash();
+
+  // ---------- the page-flow graph (built on first show: a hidden slide gives getBBox() zero widths) ----------
+  var flowBuilt; // var, never reassigned here: show() may call buildFlow() before this line runs
+  function buildFlow() {
+  if (flowBuilt) return; flowBuilt = true;
+  const data = JSON.parse(document.getElementById("flow-data").textContent);
+  const repo = "https://github.com/SpinaCMS/Spina/blob/1eb9fa87d4ad559e946df2b1d16c401177233a6a/";
+  const W = 1100, H = 600, svgNS = "http://www.w3.org/2000/svg";
+  const nodes = data.nodes.map((n, i) => ({ id: n.id, path: n.path, template: n.template, x: W / 2 + 220 * Math.cos(i), y: H / 2 + 170 * Math.sin(i), w: 0, h: 22, fixed: false }));
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const links = data.links.filter(([s, t]) => s !== t && byId.has(s) && byId.has(t)).map(([s, t]) => ({ s: byId.get(s), t: byId.get(t) }));
+  const linked = new Set(links.flatMap((l) => [l.s.id, l.t.id]));
+  // ponytail: plain spring-and-repulsion layout; a layered layout (dagre/ELK) is the upgrade if ranks matter.
+  function step(alpha) {
+    for (const a of nodes) for (const b of nodes) {
+      if (a === b) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy || 1, d = Math.sqrt(d2);
+      const f = (linked.has(a.id) && linked.has(b.id) ? 26000 : 9000) / d2 * alpha;
+      if (!a.fixed) { a.x -= dx / d * f; a.y -= dy / d * f; }
+    }
+    for (const l of links) {
+      const dx = l.t.x - l.s.x, dy = l.t.y - l.s.y, d = Math.sqrt(dx * dx + dy * dy) || 1, f = (d - 190) * 0.05 * alpha;
+      if (!l.s.fixed) { l.s.x += dx / d * f; l.s.y += dy / d * f; }
+      if (!l.t.fixed) { l.t.x -= dx / d * f; l.t.y -= dy / d * f; }
+    }
+    for (const n of nodes) {
+      if (n.fixed) continue;
+      n.x += (W / 2 - n.x) * 0.01 * alpha; n.y += (H / 2 - n.y) * 0.01 * alpha;
+      const m = n.w / 2 + 8;
+      n.x = Math.max(m, Math.min(W - m, n.x)); n.y = Math.max(16, Math.min(H - 16, n.y));
+    }
+  }
+  function unoverlap() {
+    for (let k = 0; k < 60; k++) for (const a of nodes) for (const b of nodes) {
+      if (a === b) continue;
+      const ox = (a.w + b.w) / 2 + 10 - Math.abs(a.x - b.x), oy = a.h + 8 - Math.abs(a.y - b.y);
+      if (ox > 0 && oy > 0) { if (ox < oy) { const s = Math.sign(a.x - b.x) || 1; a.x += s * ox / 2; b.x -= s * ox / 2; } else { const s = Math.sign(a.y - b.y) || 1; a.y += s * oy / 2; b.y -= s * oy / 2; } }
+    }
+  }
+  const el = (tag, attrs) => { const e = document.createElementNS(svgNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+  const svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Page flow of the Spina admin: boxes are pages, arrows are links found in templates" });
+  const defs = el("defs", {}); defs.innerHTML = '<marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 8 4 0 8z" fill="context-stroke"/></marker>';
+  const gE = el("g", {}), gN = el("g", {});
+  svg.append(defs, gE, gN);
+  for (const l of links) { l.el = el("path", { class: "edge" }); gE.append(l.el); }
+  for (const n of nodes) {
+    n.el = el("g", { class: "node" + (linked.has(n.id) ? "" : " orphan"), tabindex: "0", role: "button", "aria-label": n.path });
+    n.rect = el("rect", { height: n.h, y: -n.h / 2 });
+    n.text = el("text", { "text-anchor": "middle", dy: "0.35em" }); n.text.textContent = n.path;
+    n.el.append(n.rect, n.text); gN.append(n.el);
+  }
+  const box = document.getElementById("flow");
+  const hud = document.createElement("div"); hud.className = "hud";
+  const intro = "<strong>Spina admin</strong>: " + nodes.length + " pages, " + links.length + " links between them from templates. Click a page to light its neighbours; drag to rearrange.";
+  hud.innerHTML = intro;
+  const tools = document.createElement("div"); tools.className = "tools";
+  const relayout = document.createElement("button"); relayout.type = "button"; relayout.className = "btn"; relayout.setAttribute("aria-label", "Re-run the layout"); relayout.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-fit"/></svg>';
+  tools.append(relayout);
+  box.append(hud, tools, svg);
+  for (const n of nodes) { n.w = n.text.getBBox().width + 16; n.rect.setAttribute("width", n.w); n.rect.setAttribute("x", -n.w / 2); }
+  function edgePath(l) {
+    const dx = l.t.x - l.s.x, dy = l.t.y - l.s.y, d = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / d, uy = dy / d;
+    const cut = Math.min(l.t.w / 2 / Math.max(Math.abs(ux), 1e-6), l.t.h / 2 / Math.max(Math.abs(uy), 1e-6)) + 2;
+    const tx = l.t.x - ux * cut, ty = l.t.y - uy * cut;
+    const mx = (l.s.x + tx) / 2 - dy * 0.12, my = (l.s.y + ty) / 2 + dx * 0.12;
+    return "M" + l.s.x + " " + l.s.y + " Q" + mx + " " + my + " " + tx + " " + ty;
+  }
+  function draw() {
+    for (const l of links) l.el.setAttribute("d", edgePath(l));
+    for (const n of nodes) n.el.setAttribute("transform", "translate(" + n.x + " " + n.y + ")");
+  }
+  function layout() { for (const n of nodes) n.fixed = false; for (let k = 0; k < 400; k++) step(1 - k / 400); unoverlap(); draw(); }
+  let selected = null;
+  function select(n) {
+    selected = selected === n ? null : n;
+    const near = new Set(selected ? [selected.id] : []);
+    for (const l of links) if (selected && (l.s === selected || l.t === selected)) { near.add(l.s.id); near.add(l.t.id); }
+    for (const l of links) l.el.setAttribute("class", "edge" + (selected ? (l.s === selected || l.t === selected ? " hot" : " dim") : ""));
+    for (const m of nodes) m.el.setAttribute("class", "node" + (linked.has(m.id) ? "" : " orphan") + (m === selected ? " sel" : selected && !near.has(m.id) ? " dim" : ""));
+    if (!selected) { hud.innerHTML = intro; return; }
+    const out = links.filter((l) => l.s === selected).map((l) => l.t.path), inn = links.filter((l) => l.t === selected).map((l) => l.s.path);
+    const a = document.createElement("a"); a.href = repo + selected.template; a.target = "_blank"; a.rel = "noopener"; a.textContent = selected.template.replace("app/views/spina/", "");
+    hud.replaceChildren(Object.assign(document.createElement("code"), { textContent: selected.path }), " ", a, document.createElement("br"),
+      "links to: " + (out.join(", ") || "nothing found"), document.createElement("br"), "linked from: " + (inn.join(", ") || "nothing found in a template"));
+  }
+  let drag = null, moved = false;
+  const pt = (ev) => { const r = svg.getBoundingClientRect(); return [(ev.clientX - r.left) * W / r.width, (ev.clientY - r.top) * H / r.height]; };
+  for (const n of nodes) {
+    n.el.addEventListener("pointerdown", (ev) => { drag = n; moved = false; n.fixed = true; svg.classList.add("dragging"); n.el.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+    n.el.addEventListener("pointermove", (ev) => { if (drag !== n) return; const [x, y] = pt(ev); n.x = x; n.y = y; moved = true; for (let k = 0; k < 2; k++) step(0.15); unoverlap(); draw(); });
+    n.el.addEventListener("pointerup", () => { if (drag === n && !moved) select(n); drag = null; svg.classList.remove("dragging"); });
+    n.el.addEventListener("dblclick", () => window.open(repo + n.template, "_blank", "noopener"));
+    n.el.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); select(n); } });
+  }
+  relayout.addEventListener("click", layout);
+  layout();
+  }
+})();
+</script>
+</body>
+</html>
