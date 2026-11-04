@@ -239,6 +239,19 @@ a.ext .icon { width: 12px; height: 12px; color: var(--color-muted); }
 /* #main outranks Mermaid's own #mermaid-<n> .node rules */
 #main .diagram .node.muted rect, #main .diagram .node.muted polygon { fill: var(--color-paper-2); stroke: var(--color-rule); }
 #main .diagram .node.muted .nodeLabel { color: var(--color-muted); }
+/* selection: the selected page, its edges and neighbours stay lit, the rest dims; hover lights a page's edges */
+#main .diagram g.node { cursor: pointer; }
+#main .diagram.has-selection .node:not(.lit), #main .diagram.has-selection .edgePaths path:not(.lit), #main .diagram.has-selection .edgeLabels .label:not(.lit) { opacity: 0.3; transition: opacity var(--dur-micro) var(--ease-out); }
+#main .diagram .edgePaths path.lit { stroke: var(--color-accent); stroke-width: 2px; }
+#main .diagram g.node:focus { outline: none; }
+#main .diagram g.node:focus-visible rect, #main .diagram g.node:focus-visible polygon { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.flow-detail { margin-bottom: var(--space-lg); }
+.link-btn { padding: 0; border: 0; background: none; color: var(--color-ink); font: inherit; font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: var(--color-muted); text-underline-offset: 0.16em; cursor: pointer; }
+.link-btn:hover { text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; }
+#flow-detail:focus { outline: none; }
+@media (prefers-reduced-motion: reduce) {
+  #main .diagram.has-selection .node:not(.lit), #main .diagram.has-selection .edgePaths path:not(.lit), #main .diagram.has-selection .edgeLabels .label:not(.lit) { transition: none; }
+}
 
 /* ---------- tables: an ink rule on top, hairlines between rows ---------- */
 .table-wrap { overflow-x: auto; }
@@ -5059,6 +5072,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
       try {
         await window.mermaid.run({ nodes: [node] });
         viewerize(node);
+        if (node.dataset.flowGroup != null) flowInteract(node);
       } catch (e) {
         const src = node.dataset.source || "";
         node.replaceChildren(h("div", { class: "diagram-error" },
@@ -5313,6 +5327,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
   function routeDetail(route, ctrl, action, notes) {
     const filters = ctrl ? (ctrl.filters || []).filter((f) => filterApplies(f, route.action)) : [];
     const docs = ctrl && ctrl.source ? docsAbout(ctrl.source.path) : [];
+    const page = route.redirect ? null : flowNodeOf(route); // the page this route reaches, for the flow cross-links
     return h("div", { class: "detail" },
       notes.length ? h("ul", { class: "plain warn-text warn-list" }, notes.map((w) => h("li", { class: "inline-warn" }, icon("i-warn"), w.message))) : null,
       h("div", { class: "detail-grid" },
@@ -5331,7 +5346,9 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
           route.name ? h("li", {}, "name ", h("code", {}, route.name)) : null,
           h("li", {}, "route ", codeLink(route.source)),
           !route.redirect && action ? h("li", {}, "action ", codeLink(action.source)) : null,
-          !route.redirect && ctrl ? h("li", {}, "controller ", codeLink(ctrl.source)) : null)),
+          !route.redirect && ctrl ? h("li", {}, "controller ", codeLink(ctrl.source)) : null,
+          page ? h("li", {}, "links to ", commaList(flowLinksOut(page).map((l) => l.node ? h("a", { href: flowHref(l.node) }, h("code", {}, l.route.path)) : h("code", {}, l.route.path)))) : null,
+          page ? h("li", {}, "linked from ", commaList(flowLinkedFrom(page.id).map((n) => h("a", { href: flowHref(n) }, h("code", {}, n.path))))) : null)),
         h("div", {}, label("Docs"), h("ul", { class: "plain" },
           docs.map((d) => h("li", {}, h("a", { href: docHref(d) }, d.title || d.path))),
           h("li", {}, ext(route.doc_url, "Rails routing guide"))))));
@@ -5719,6 +5736,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
   function renderFlow(arg) {
     const graph = flowGraph();
     const [want, pageId] = String(arg || "").split("/");
+    const before = state.flowPage;
     state.flowPage = pageId && graph.nodes.has(pageId) ? pageId : null;
     const out = [pageHeader("Page flow", "Every page a GET route reaches, and the links, forms and redirects between them. Layout links are listed above the diagram, not drawn.")];
     if (!graph.nodes.size) {
@@ -5726,6 +5744,11 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
         h("p", {}, "No pages. A page is a controller action a GET route reaches that renders an HTML template or an Inertia page; this app has none.")));
     }
     const drawn = graph.nodes.size >= FLOW_LIMIT ? (graph.groups.has(want) ? want : graph.groups.keys().next().value) : null;
+    // Only the page changed and this group is already drawn: select in place, keeping zoom and pan (render() keeps main).
+    if (state.flowPage !== before && main.querySelector('.mermaid[data-flow-group="' + CSS.escape(drawn == null ? "*" : drawn) + '"]')) {
+      selectPage(state.flowPage);
+      return null;
+    }
     out.push(h("nav", { class: "chips", "aria-label": "Page groups" }, [...graph.groups].map(([g, ns]) =>
       h("a", { class: "chip", href: "#/flow/" + encodeURIComponent(g), "aria-current": g === drawn ? "page" : null },
         icon("i-flow"), g, " ", h("span", { class: "num muted" }, ns.length)))));
@@ -5739,7 +5762,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
     }
     const block = mermaidBlock(flowSource(graph, drawn));
     block.setAttribute("data-flow-group", drawn == null ? "*" : drawn);
-    out.push(block, h("div", { id: "flow-detail" }));
+    out.push(block, h("div", { id: "flow-detail", tabindex: "-1" }, state.flowPage ? flowDetail(state.flowPage) : null));
     const fromNav = new Set(graph.nav.flatMap((n) => n.links.map((l) => l.node && l.node.id)));
     const rows = [...graph.nodes.values()]
       .filter((n) => matches(n.path, ...n.routes.map((r) => r.name), n.controller, n.page.template && n.page.template.path))
@@ -5763,6 +5786,156 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
       ? table(["Page", "Template", "Links out", "Linked from", "Lands here after", "Warnings"], rows, "flow-ledger")
       : emptyState("pages", pages.length));
     return out;
+  }
+
+  // ---------- page flow: selection, detail panel ----------
+
+  let flowView = null; // the drawn diagram: its box and the SVG elements per node id and per edge
+
+  const flowNodeOf = (route) => [...flowGraph().nodes.values()].find((n) => n.routes.includes(route)) || null;
+  const commaList = (els) => els.length ? els.flatMap((el, i) => i ? [", ", el] : [el]) : muted("none");
+
+  // A page's plain links grouped by the route they reach, with every call site; node is null when the route is not a page.
+  function flowLinksOut(n) {
+    const out = new Map();
+    for (const link of n.page.links || []) {
+      const route = link.form ? null : flowRoute(link);
+      if (!route) continue;
+      if (!out.has(route)) out.set(route, { route, node: flowNodeOf(route), sources: [] });
+      out.get(route).sources.push(link.source);
+    }
+    return [...out.values()];
+  }
+
+  function flowLinkedFrom(id) {
+    const graph = flowGraph();
+    return [...new Set(graph.edges.filter((e) => e.to === id && !e.form).map((e) => e.from))].map((f) => graph.nodes.get(f)).filter(Boolean);
+  }
+
+  // The group the diagram draws: a group name, or "*" when every group is drawn.
+  function flowDrawnGroup() {
+    const block = main.querySelector(".mermaid[data-flow-group]");
+    return block ? block.dataset.flowGroup : "*";
+  }
+
+  // Lights the selected page with its edges and neighbours, and the hovered page's edges; everything else dims.
+  function paintFlow() {
+    if (!flowView || !flowView.box.isConnected) return;
+    const { box, nodes, edges, hover } = flowView, sel = state.flowPage && nodes.has(state.flowPage) ? state.flowPage : null;
+    box.querySelectorAll(".lit").forEach((el) => el.classList.remove("lit"));
+    box.classList.toggle("has-selection", !!sel);
+    const light = (id, neighbours) => {
+      for (const { e, els } of edges) {
+        if (e.from !== id && e.to !== id) continue;
+        els.forEach((el) => el.classList.add("lit"));
+        if (neighbours) [e.from, e.to].forEach((x) => { const g = nodes.get(x); if (g) g.classList.add("lit"); });
+      }
+      const g = nodes.get(id);
+      if (neighbours && g) g.classList.add("lit");
+    };
+    if (sel) light(sel, true);
+    if (hover) light(hover, false);
+  }
+
+  // Selects a page (null clears) without re-rendering: the diagram keeps its zoom and pan, the hash is replaced, not pushed.
+  function selectPage(id) {
+    const n = flowGraph().nodes.get(id) || null;
+    state.flowPage = n ? n.id : null;
+    paintFlow();
+    const drawn = flowDrawnGroup();
+    const group = n ? n.group : drawn === "*" ? null : drawn;
+    history.replaceState(null, "", "#/flow" + (group == null ? "" : "/" + encodeURIComponent(group)) + (n ? "/" + n.id : ""));
+    const panel = document.getElementById("flow-detail");
+    if (panel) panel.replaceChildren(...(n ? [flowDetail(n.id)] : []));
+  }
+
+  // A page in the drawn diagram is selected in place (again clears); a page outside the one drawn group is a navigation.
+  function flowPick(n) {
+    const drawn = flowDrawnGroup();
+    if (drawn !== "*" && n.group !== drawn) location.hash = flowHref(n);
+    else selectPage(state.flowPage === n.id ? null : n.id);
+  }
+
+  // After Mermaid draws the flow: hover, click, keyboard and Escape on the page nodes.
+  function flowInteract(mermaidNode) {
+    const box = mermaidNode.closest(".diagram"), svg = mermaidNode.querySelector("svg");
+    if (!box || !svg) return;
+    const graph = flowGraph(), nodes = new Map();
+    // Mermaid 12.2.0 gives a node <g> the id mermaid-<n>-flowchart-<node id>-<k>, and an edge path and label data-id L_<from>_<to>_<k>.
+    for (const g of svg.querySelectorAll("g.node")) {
+      const m = /-flowchart-(.+)-\d+$/.exec(g.id);
+      if (m) nodes.set(m[1], g);
+    }
+    const edges = graph.edges.map((e) => {
+      const prefix = "L_" + e.from + "_" + e.to + "_";
+      const els = [...svg.querySelectorAll('.edgePaths path[data-id^="' + prefix + '"], .edgeLabels .label[data-id^="' + prefix + '"]')]
+        .filter((el) => /^\d+$/.test(el.getAttribute("data-id").slice(prefix.length)));
+      return { e, els };
+    }).filter((x) => x.els.length);
+    flowView = { box, nodes, edges, hover: null };
+    let down = null;
+    for (const [id, g] of nodes) {
+      const n = graph.nodes.get(id);
+      if (!n) continue; // a form's action stub lights with its page but is not a page itself
+      g.setAttribute("tabindex", "0");
+      g.setAttribute("role", "button");
+      g.setAttribute("aria-label", n.path);
+      g.addEventListener("pointerenter", () => { flowView.hover = id; paintFlow(); });
+      g.addEventListener("pointerleave", () => { flowView.hover = null; paintFlow(); });
+      g.addEventListener("pointerdown", (e) => { down = { n, x: e.clientX, y: e.clientY }; });
+      g.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault(); e.stopPropagation(); // Space on a node selects; it does not start the viewer's pan
+        flowPick(n);
+      });
+    }
+    // The viewer captures the pointer to pan, so a click is a pointerup close to a pointerdown on a page node.
+    box.addEventListener("pointerup", (e) => {
+      if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4) flowPick(down.n);
+      down = null;
+    });
+    box.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.flowPage) selectPage(null); });
+    paintFlow();
+  }
+
+  // The panel under the diagram: the selected page's routes, views, flow, filters, models and documents.
+  function flowDetail(id) {
+    const graph = flowGraph(), n = graph.nodes.get(id);
+    const ctrl = controllers.find((c) => c.name === n.controller);
+    const action = ctrl && (ctrl.actions || []).find((a) => a.name === n.action);
+    const filters = ctrl ? (ctrl.filters || []).filter((f) => filterApplies(f, n.action)) : [];
+    const docs = ctrl && ctrl.source ? docsAbout(ctrl.source.path) : [];
+    const layout = layouts.find((l) => l.name === n.page.layout);
+    const list = (items, fn, none) => items.length ? h("ul", { class: "plain" }, items.map((x) => h("li", {}, fn(x)))) : empty(none);
+    const pageBtn = (p) => h("button", { type: "button", class: "link-btn", onclick: () => {
+      flowPick(p);
+      const panel = document.getElementById("flow-detail");
+      if (panel) panel.focus({ preventScroll: true }); // the clicked button was replaced with the panel's contents
+    } }, h("code", {}, p.path));
+    const forms = graph.edges.filter((e) => e.from === id && e.form);
+    const lands = pages.flatMap((p) => (p.redirects || [])
+      .filter((r) => { const route = flowRoute({ stem: r.stem, engine: r.engine, form: false }); return route && n.routes.includes(route); })
+      .map((r) => ({ p, r })));
+    return h("div", { class: "detail flow-detail" },
+      h("h2", { class: "group-head" }, n.controller + "#" + n.action, " ", action ? codeLink(action.source, "source") : null),
+      n.inertia ? h("p", { class: "muted" }, "Inertia page: client-side links are not collected") : null,
+      h("div", { class: "detail-grid" },
+        h("div", {}, label("Paths"), list(n.routes, (r) => [verbPill(r.verb), " ", h("code", {}, r.path)], "none")),
+        h("div", {}, label("Views"), h("ul", { class: "plain" },
+          h("li", {}, "template ", codeLink(n.page.template)),
+          h("li", {}, "layout ", layout ? codeLink(layout.source, layout.name) : n.page.layout ? h("code", {}, n.page.layout) : muted("none")))),
+        h("div", {}, label("Partials and components"), list([...(n.page.partials || []), ...(n.page.components || [])], (c) => codeLink(c), "none")),
+        h("div", {}, label("Links to"),
+          list(flowLinksOut(n), (l) => [l.node ? pageBtn(l.node) : h("code", {}, l.route.path), " ", l.sources.map((s) => codeLink(s))], "none"),
+          forms.length ? h("ul", { class: "plain" }, forms.map((e) => h("li", {}, "form ",
+            e.stub ? [verbPill(e.stub.verb), " ", h("code", {}, e.stub.action), " ", muted("target renders or redirects to a record, not a named route")]
+              : [h("code", {}, e.label), " then ", pageBtn(graph.nodes.get(e.to))],
+            " ", codeLink(e.source)))) : null),
+        h("div", {}, label("Linked from"), list(flowLinkedFrom(id), pageBtn, "none")),
+        h("div", {}, label("Lands here after"), list(lands, ({ p, r }) => [h("code", {}, p.controller + "#" + p.action), " ", codeLink(r.source, "source")], "none")),
+        h("div", {}, label("Filters"), list(filters, (f) => [h("code", {}, f.kind + "_action " + f.name), " ", codeLink(f.source, "source"), " ", ext(f.doc_url, "API")], "none")),
+        h("div", {}, label("Models referenced"), list(action && action.models || [], modelLink, "none detected")),
+        h("div", {}, label("Documents about this"), list(docs, (d) => h("a", { href: docHref(d) }, d.title || d.path), "none"))));
   }
 
   // ---------- chrome: nav, footer, banner ----------
@@ -5814,7 +5987,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
     let nodes, active = view;
     switch (view) {
       case "requests": nodes = renderRequests(arg); break;
-      case "flow": nodes = renderFlow(arg); break;
+      case "flow": nodes = renderFlow(arg); if (!nodes) return; break; // null: the selection changed in place
       case "domain": nodes = renderDomain(arg); break;
       case "databases": nodes = renderDatabases(); break;
       case "boot": nodes = renderBoot(); break;

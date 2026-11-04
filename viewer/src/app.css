@@ -117,6 +117,19 @@ a.ext .icon { width: 12px; height: 12px; color: var(--color-muted); }
 /* #main outranks Mermaid's own #mermaid-<n> .node rules */
 #main .diagram .node.muted rect, #main .diagram .node.muted polygon { fill: var(--color-paper-2); stroke: var(--color-rule); }
 #main .diagram .node.muted .nodeLabel { color: var(--color-muted); }
+/* selection: the selected page, its edges and neighbours stay lit, the rest dims; hover lights a page's edges */
+#main .diagram g.node { cursor: pointer; }
+#main .diagram.has-selection .node:not(.lit), #main .diagram.has-selection .edgePaths path:not(.lit), #main .diagram.has-selection .edgeLabels .label:not(.lit) { opacity: 0.3; transition: opacity var(--dur-micro) var(--ease-out); }
+#main .diagram .edgePaths path.lit { stroke: var(--color-accent); stroke-width: 2px; }
+#main .diagram g.node:focus { outline: none; }
+#main .diagram g.node:focus-visible rect, #main .diagram g.node:focus-visible polygon { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.flow-detail { margin-bottom: var(--space-lg); }
+.link-btn { padding: 0; border: 0; background: none; color: var(--color-ink); font: inherit; font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: var(--color-muted); text-underline-offset: 0.16em; cursor: pointer; }
+.link-btn:hover { text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; }
+#flow-detail:focus { outline: none; }
+@media (prefers-reduced-motion: reduce) {
+  #main .diagram.has-selection .node:not(.lit), #main .diagram.has-selection .edgePaths path:not(.lit), #main .diagram.has-selection .edgeLabels .label:not(.lit) { transition: none; }
+}
 
 /* ---------- tables: an ink rule on top, hairlines between rows ---------- */
 .table-wrap { overflow-x: auto; }
