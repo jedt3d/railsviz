@@ -89,9 +89,13 @@ class ControllersCollectorTest < Minitest::Test
     assert result["warnings"].any? { |w| w["message"].include?("PatientsController#export") }
   end
 
+  def test_engine_controller_view_resolves_through_view_paths
+    posts = result["controllers"].find { |c| c["name"] == "Blog::PostsController" }
+    assert_equal "test/dummy/engines/blog/app/views/blog/posts/index.html.erb", posts["actions"].first["view"]["path"]
+  end
+
   def test_missing_controller_warns
     assert result["warnings"].any? { |w| w["message"].include?("health#show") }
-    assert result["warnings"].any? { |w| w["message"].include?("blog/posts#index") }
     assert result["controllers"].none? { |c| c["name"] == "HealthController" }
   end
 

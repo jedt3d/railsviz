@@ -117,13 +117,13 @@ module RailsVis
           add_warning("#{klass.name}##{name}: Inertia component is computed at runtime; view not resolved")
           nil
         else
-          template = Dir.glob(RailsVis.root.join("app/views", klass.controller_path, "#{name}.*").to_s).min
-          template && view_node("template", template)
+          template = Templates.find(klass, name)
+          template && view_node("template", template.identifier)
         end
       end
 
       def view_node(kind, path)
-        { "kind" => kind, "path" => @repo.relative(path), "url" => @repo.url_for(path, 1) }
+        Source.node(name: File.basename(path), path:, line: 1, repo: @repo).slice("path", "url").merge("kind" => kind)
       end
 
       def warn_missing_controllers
