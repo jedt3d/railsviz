@@ -755,6 +755,9 @@
   const flowGroupOf = (name) => name.includes("::") ? name.slice(0, name.lastIndexOf("::")) : "(app)";
   const engineOf = (key) => { const r = routes.find((x) => x.controller === key); return r ? r.engine || null : null; };
   const flowHref = (node) => "#/flow/" + encodeURIComponent(node.group) + "/" + node.id;
+  // `match ..., via: [:get, :post]` serialises as "GET|POST": such a route is both a page and a form target.
+  const verbsOf = (r) => String(r.verb || "").split("|");
+  const isGet = (r) => verbsOf(r).includes("GET");
 
   // A link to the route it reaches: the named route by (engine, stem), then on that path the GET route for a link,
   // or for a form the write route of its method (the first write route when the method is not set).
@@ -763,9 +766,9 @@
     const named = routes.find((r) => r.name === link.stem && (r.engine || null) === engine);
     if (!named) return null;
     const onPath = routes.filter((r) => r.path === named.path && (r.engine || null) === engine);
-    if (!link.form) return onPath.find((r) => r.verb === "GET") || null;
-    const writes = onPath.filter((r) => r.verb !== "GET");
-    return (link.method ? writes.find((r) => r.verb === link.method.toUpperCase()) : writes[0]) || null;
+    if (!link.form) return onPath.find(isGet) || null;
+    const writes = onPath.filter((r) => verbsOf(r).some((v) => v !== "GET"));
+    return (link.method ? writes.find((r) => verbsOf(r).includes(link.method.toUpperCase())) : writes[0]) || null;
   }
 
   // Pages as nodes, links and form landings as edges, groups by namespace (largest first), layout links resolved.
@@ -779,7 +782,7 @@
       const action = ctrl && (ctrl.actions || []).find((a) => a.name === page.action);
       const inertia = !!(action && action.view && action.view.kind === "inertia");
       if (page.format !== "html" && !inertia) continue;
-      const rs = routes.filter((r) => r.verb === "GET" && r.controller === key && r.action === page.action && (r.engine || null) === engine);
+      const rs = routes.filter((r) => isGet(r) && r.controller === key && r.action === page.action && (r.engine || null) === engine);
       if (!rs.length) continue;
       const group = flowGroupOf(page.controller);
       const node = { id: ident(page.controller + "#" + page.action), controller: page.controller, action: page.action, group,
@@ -895,9 +898,10 @@
       .filter((n) => matches(n.path, ...n.routes.map((r) => r.name), n.controller, n.page.template && n.page.template.path))
       .sort((a, b) => a.path.localeCompare(b.path))
       .map((n) => {
-        const linksOut = graph.edges.filter((e) => e.from === n.id && !e.stub).length;
-        const into = graph.edges.filter((e) => e.to === n.id);
-        const lands = [...new Set(into.filter((e) => e.label).map((e) => e.label))];
+        // A link from a page to itself (pagination, sort, search) neither leaves it nor reaches it.
+        const linksOut = graph.edges.filter((e) => e.from === n.id && e.to !== n.id && !e.stub).length;
+        const into = graph.edges.filter((e) => e.to === n.id && e.from !== n.id);
+        const lands = [...new Set(graph.edges.filter((e) => e.to === n.id && e.label).map((e) => e.label))];
         const warns = warnings.filter((w) => w.where === "pages" && w.message.startsWith(n.controller + "#" + n.action + ":")).length;
         return h("tr", {},
           h("td", {}, verbPill(n.verb), " ", h("a", { href: flowHref(n) }, h("code", {}, n.path)),
@@ -927,7 +931,7 @@
     const out = new Map();
     for (const link of n.page.links || []) {
       const route = link.form ? null : flowRoute(link);
-      if (!route) continue;
+      if (!route || n.routes.includes(route)) continue; // a link to the page itself
       if (!out.has(route)) out.set(route, { route, node: flowNodeOf(route), sources: [] });
       out.get(route).sources.push(link.source);
     }
@@ -936,7 +940,7 @@
 
   function flowLinkedFrom(id) {
     const graph = flowGraph();
-    return [...new Set(graph.edges.filter((e) => e.to === id && !e.form).map((e) => e.from))].map((f) => graph.nodes.get(f)).filter(Boolean);
+    return [...new Set(graph.edges.filter((e) => e.to === id && e.from !== id && !e.form).map((e) => e.from))].map((f) => graph.nodes.get(f)).filter(Boolean);
   }
 
   // The group the diagram draws: a group name, or "*" when every group is drawn.
