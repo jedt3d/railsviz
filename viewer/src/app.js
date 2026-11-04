@@ -892,7 +892,7 @@
         return h("tr", {},
           h("td", {}, verbPill(n.verb), " ", h("a", { href: flowHref(n) }, h("code", {}, n.path)),
             n.inertia ? [" ", h("span", { class: "tag tag--out" }, "page")] : null,
-            !into.length && !fromNav.has(n.id) ? [" ", h("span", { class: "tag tag--warn" }, "unreached")] : null),
+            !into.length && !linksOut && !fromNav.has(n.id) ? [" ", h("span", { class: "tag tag--warn" }, "unreached")] : null),
           h("td", {}, codeLink(n.page.template)),
           h("td", { class: "num" }, linksOut),
           h("td", { class: "num" }, into.length, !into.length && fromNav.has(n.id) ? [" ", h("span", { class: "tag tag--out" }, "from navigation")] : null),
