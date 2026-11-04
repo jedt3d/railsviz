@@ -31,11 +31,16 @@ module RailsVis
 
     # Ruby source of the template wrapped in a method; line numbers match the template's own.
     def compile(template)
-      ext = File.extname(template.identifier).delete_prefix(".").to_sym
+      compile_file(template.identifier, format: template.format)
+    end
+
+    # Same as compile for a file found outside a lookup (a view component's sidecar template).
+    def compile_file(path, format: :html)
+      ext = File.extname(path).delete_prefix(".").to_sym
       handler = ActionView::Template.registered_template_handler(ext)
       raise RailsVis::Error, "no template handler for .#{ext}" unless handler
-      source = File.read(template.identifier, encoding: "UTF-8")
-      t = ActionView::Template.new(source, template.identifier, handler, locals: [], format: template.format)
+      source = File.read(path, encoding: "UTF-8")
+      t = ActionView::Template.new(source, path, handler, locals: [], format: format)
       annotate = ActionView::Base.annotate_rendered_view_with_filenames
       ActionView::Base.annotate_rendered_view_with_filenames = false # the BEGIN comment would shift lines by one
       "def _rails_vis_template; " + handler.call(t, source) + "\nend"

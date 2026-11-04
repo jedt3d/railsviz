@@ -17,7 +17,7 @@ class ControllersCollectorTest < Minitest::Test
   def controller_path = "test/dummy/app/controllers/patients_controller.rb"
 
   def test_actions_and_sources
-    assert_equal %w[export index show], patients["actions"].map { |a| a["name"] }.sort
+    assert_equal %w[create export index new show], patients["actions"].map { |a| a["name"] }.sort
     assert_equal "ApplicationController", patients["parent"]
     assert_equal controller_path, patients["source"]["path"]
     def_line = File.readlines(RailsVis.root.join("app/controllers/patients_controller.rb")).index { |l| l.include?("def show") } + 1

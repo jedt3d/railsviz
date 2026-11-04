@@ -39,6 +39,7 @@ module RailsVis
       controllers = run("controllers") do
         Collectors::Controllers.new(repo: repo, config: config, routes: routes["routes"], model_names: models["model_names"] || []).call
       end
+      pages = run("pages") { Collectors::Pages.new(repo: repo, routes: routes["routes"], controllers: controllers["controllers"]).call }
       databases = run("databases") { Collectors::Databases.new(models: models["models"]).call }
       documents = run("documents") { Collectors::Documents.new(config: config, repo: repo).call }
       boot = run("boot", empty: {}) { Collectors::Boot.new(repo: repo).call }
@@ -60,6 +61,8 @@ module RailsVis
         "middleware" => middleware["middleware"],
         "entry_points" => entry_points["entry_points"],
         "gems" => gems["gems"],
+        "pages" => pages["pages"],
+        "layouts" => pages["layouts"] || [],
         "warnings" => @warnings
       }
     end
@@ -76,7 +79,7 @@ module RailsVis
 
     def meta(repo)
       {
-        "schema_version" => 2,
+        "schema_version" => 3,
         "app_name" => Rails.application.class.module_parent_name,
         "rails_version" => Rails.version,
         "ruby_version" => RUBY_VERSION,

@@ -5,7 +5,7 @@ require "rake"
 require "minitest/mock"
 
 class DumpTest < Minitest::Test
-  KEYS = %w[meta documents routes controllers models databases boot middleware entry_points gems warnings].freeze
+  KEYS = %w[meta documents routes controllers models databases boot middleware entry_points gems pages layouts warnings].freeze
 
   # One dump shared by the read-only tests; the sentinel is set before it runs.
   # Tests that rewrite the output reset it so the next reader dumps again.
@@ -33,7 +33,7 @@ class DumpTest < Minitest::Test
     assert out.join("index.html").file?
     assert_equal KEYS.sort, data.keys.sort
     meta = data["meta"]
-    assert_equal 2, meta["schema_version"]
+    assert_equal 3, meta["schema_version"]
     assert_equal "Dummy", meta["app_name"]
     assert_equal Rails.version, meta["rails_version"]
     assert_equal RUBY_VERSION, meta["ruby_version"]
@@ -96,6 +96,17 @@ class DumpTest < Minitest::Test
     assert_equal [], result["routes"]
     assert_includes result["warnings"], { "where" => "routes", "message" => "collector failed: RuntimeError: boom" }
     refute_empty result["models"]
+  ensure
+    self.class.reset!
+  end
+
+  def test_pages_collector_failure_is_empty_shape
+    boom = ->(**) { raise "boom" }
+    dir = RailsVis::Collectors::Pages.stub(:new, boom) { RailsVis::Dump.new(root: RailsVis.root).call }
+    result = JSON.parse(dir.join("data.json").read)
+    assert_equal [], result["pages"]
+    assert_equal [], result["layouts"]
+    assert_includes result["warnings"], { "where" => "pages", "message" => "collector failed: RuntimeError: boom" }
   ensure
     self.class.reset!
   end
