@@ -93,7 +93,7 @@ class AcceptanceTest < Minitest::Test
     assert_operator html_pages.size, :>=, 37
     assert_operator html_pages.sum { |p| p["links"].size }, :>=, 20
     assert_operator data["pages"].sum { |p| p["redirects"].size }, :>=, 16
-    assert data["layouts"].any? { |l| l["name"] == "spina/admin/application" }
+    assert data["layouts"].any? { |l| l["name"] == "spina/admin/admin" }
     assert html_pages.all? { |p| p["template"]["url"].to_s.match?(%r{\Ahttps://github\.com/.+#L1\z}) }
   end
 

@@ -19,6 +19,16 @@ class TemplatesTest < Minitest::Test
     assert_nil RailsVis::Templates.find(PatientsController, "nothing")
   end
 
+  # A bare name falls back from the template's own folder to the controller's view prefixes, as Rails does.
+  def test_bare_partial_resolves_through_controller_prefixes
+    t = RailsVis::Templates.partial(PatientsController, "header", "layouts/application")
+    assert_equal RailsVis.root.join("app/views/application/_header.html.erb").to_s, t.identifier
+  end
+
+  def test_missing_partial_is_nil
+    assert_nil RailsVis::Templates.partial(PatientsController, "nothing", "patients/index")
+  end
+
   def test_layout
     t = RailsVis::Templates.layout(PatientsController)
     assert_equal "layouts/application", t.virtual_path

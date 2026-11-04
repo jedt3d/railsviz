@@ -111,7 +111,7 @@ controllers collector and returns `{ "pages" => [...], "layouts" => [...],
 the template file, the partials it renders (resolved recursively with a visited
 set, by `render "name"` / `render partial: "name"` / `render "dir/name"` with a
 string literal; relative names resolve against the template's own folder, then
-`app/views` of the same view paths), and the view components it renders
+the controller's view prefixes (`_prefixes`, as Rails does)), and the view components it renders
 (`render SomeComponent.new(...)` with a literal constant; the component's own
 template is the sidecar file next to its class, or its `call` method). For every
 action, with or without a template, the action body for `redirect_to`.
@@ -155,7 +155,7 @@ only the layout name. Links found in a layout are never copied onto pages.
     "controller": "Spina::Admin::UsersController",
     "action": "index",
     "template": { "name": "spina/admin/users/index.html.erb", "path": "app/views/spina/admin/users/index.html.erb", "line": 1, "url": "https://github.com/.../index.html.erb#L1" },
-    "layout": "spina/admin/application",
+    "layout": "spina/admin/admin",
     "partials": [ { "name": "spina/admin/users/_user.html.erb", "path": "...", "line": 1, "url": "..." } ],
     "components": [ { "name": "Spina::UserInterface::TabLinkComponent", "path": "app/components/spina/user_interface/tab_link_component.rb", "line": 3, "url": "..." } ],
     "links": [
@@ -169,8 +169,8 @@ only the layout name. Links found in a layout are never copied onto pages.
 ],
 "layouts": [
   {
-    "name": "spina/admin/application",
-    "source": { "name": "layouts/spina/admin/application.html.erb", "path": "...", "line": 1, "url": "..." },
+    "name": "spina/admin/admin",
+    "source": { "name": "layouts/spina/admin/admin.html.erb", "path": "...", "line": 1, "url": "..." },
     "controllers": [ "Spina::Admin::UsersController", "..." ],
     "links": [ { "stem": "admin_pages", "engine": "Spina::Engine", "form": false, "source": { "...": "..." } } ]
   }
@@ -327,7 +327,7 @@ each a link into `#/flow/<group>/<route>`. Nothing else changes elsewhere.
 - Template and layout resolution. Verified on the dummy app under Rails 8.1.4
   on 2026-11-04 (`bin/rails runner`, `PatientsController`):
   `lc = ActionView::LookupContext.new(klass._view_paths, { formats: [:html] })`;
-  `lc.find_all(action, [klass.controller_path], false).first` returns the
+  `lc.find_all(action, klass._prefixes, false).first` returns the
   template (`#identifier` is its absolute path) or nil; partials use `true` as
   the third argument; `klass.new.send(:_layout, lc, [:html], [])` returns the
   layout as an `ActionView::Template` (its `identifier` is the file), a String

@@ -116,6 +116,7 @@ class DumpTest < Minitest::Test
     assert_includes html, 'id="i-flow"'
     assert_includes html, "flowchart LR"
     assert data["pages"].any? { |p| p["controller"] == "PatientsController" && p["action"] == "index" }
+    assert data["routes"].any? { |r| r["verb"] == "GET|POST" && r["path"].start_with?("/search") }, "fixture: a route with two verbs"
   end
 
   def test_rake_task_defined_by_railtie

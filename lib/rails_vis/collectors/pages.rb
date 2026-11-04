@@ -44,14 +44,16 @@ module RailsVis
       private
 
       def controller_pages(row)
-        klass = row["name"].safe_constantize
-        unless klass
-          add_warning("#{row["name"]}: controller class not loadable; pages skipped")
-          return []
-        end
-        row["actions"].filter_map do |action|
-          where = "#{klass.name}##{action["name"]}"
-          Collectors.part("pages", where, nil, @warnings) { page_row(klass, action, where) }
+        Collectors.part("pages", row["name"], [], @warnings) do
+          klass = row["name"].safe_constantize
+          unless klass
+            add_warning("#{row["name"]}: controller class not loadable; pages skipped")
+            next []
+          end
+          row["actions"].filter_map do |action|
+            where = "#{klass.name}##{action["name"]}"
+            Collectors.part("pages", where, nil, @warnings) { page_row(klass, action, where) }
+          end
         end
       end
 
@@ -66,7 +68,7 @@ module RailsVis
         elsif (template = Templates.find(klass, action["name"]))
           read = read(klass, template, where)
           page.merge!("template" => template_node(template), "format" => template.format&.to_s,
-                      "layout" => layout(klass, where), "partials" => read[:partials],
+                      "layout" => [:html, nil].include?(template.format) ? layout(klass, where) : nil, "partials" => read[:partials],
                       "components" => read[:components], "links" => read[:links])
         end
         page if page["template"] || page["links"].any? || page["redirects"].any?
@@ -86,7 +88,9 @@ module RailsVis
       end
 
       # The layout's name; its row (links included) is built the first time any action resolves to it.
+      # ActionController::API has no layouts (no _layout), so its pages get none.
       def layout(klass, where)
+        return unless klass.private_method_defined?(:_layout) || klass.method_defined?(:_layout)
         @layout_of ||= {}
         template = @layout_of.fetch(klass) do
           @layout_of[klass] = Collectors.part("pages", "#{klass.name} layout", nil, @warnings) { Templates.layout(klass) }

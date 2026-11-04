@@ -7,6 +7,8 @@ Rails.application.routes.draw do
     get :export, on: :member
   end
   get "/people", to: "patients#index"
+  match "/search", to: "patients#index", via: %i[get post]
+  get "/api/ping", to: "api/pings#show"
   get "/admin", to: "admin#index"
   get "/admin/reports", to: "admin/reports#index"
   mount Blog::Engine => "/blog"

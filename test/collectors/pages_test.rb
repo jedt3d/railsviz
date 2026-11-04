@@ -49,8 +49,34 @@ class PagesCollectorTest < Minitest::Test
     layout = result["layouts"].find { |l| l["name"] == "application" }
     assert_equal "test/dummy/app/views/layouts/application.html.erb", layout["source"]["path"]
     assert_includes layout["controllers"], "PatientsController"
-    assert_equal ["patients"], layout["links"].map { |l| l["stem"] }
+    # One from the layout's own line, one from application/_header (a bare render resolved through _prefixes).
+    assert_equal [["patients", "test/dummy/app/views/layouts/application.html.erb"],
+                  ["patients", "test/dummy/app/views/application/_header.html.erb"]],
+                 layout["links"].map { |l| [l["stem"], l["source"]["path"]] }
+    assert result["warnings"].none? { |w| w["message"].include?('"header"') }
     assert result["pages"].none? { |p| p["links"].any? { |l| l["source"]["path"].include?("layouts/") } }
+  end
+
+  # ActionController::API has no layouts; a JSON template gets none either.
+  def test_api_controller_json_page_has_no_layout
+    p = page("Api::PingsController", "show")
+    assert_equal "json", p["format"]
+    assert_nil p["layout"]
+    assert result["warnings"].none? { |w| w["message"].include?("Api::PingsController") }
+    assert result["layouts"].none? { |l| l["controllers"].include?("Api::PingsController") }
+  end
+
+  def test_odd_controller_row_is_a_warning_not_a_failure
+    repo = RailsVis::Repo.detect(RailsVis.root)
+    routes = RailsVis::Collectors::Routes.new(repo: repo).call["routes"]
+    config = RailsVis::Config.load(RailsVis.root)
+    controllers = RailsVis::Collectors::Controllers.new(repo: repo, config: config, routes: routes, model_names: ["Patient"]).call["controllers"]
+    # NoSuchController is caught by the not-loadable check; Patient loads, so its nil actions raise inside the loop.
+    rows = controllers + [{ "name" => "NoSuchController", "actions" => nil }, { "name" => "Patient", "actions" => nil }]
+    odd = RailsVis::Collectors::Pages.new(repo: repo, routes: routes, controllers: rows).call
+    assert_equal result["pages"].map { |p| [p["controller"], p["action"]] }, odd["pages"].map { |p| [p["controller"], p["action"]] }
+    assert_equal 1, odd["warnings"].count { |w| w["message"].include?("NoSuchController") }
+    assert_equal 1, odd["warnings"].count { |w| w["where"] == "pages" && w["message"].start_with?("Patient: NoMethodError") }
   end
 
   def test_unparseable_partial_warns

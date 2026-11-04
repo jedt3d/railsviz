@@ -6,9 +6,10 @@ module RailsVis
   module Templates
     module_function
 
+    # Through the controller's view prefixes (its own path, then its ancestors'), as Rails renders an action.
     def find(klass, action)
-      lookup(klass, html: true).find_all(action, [klass.controller_path], false).first ||
-        lookup(klass, html: false).find_all(action, [klass.controller_path], false).first
+      lookup(klass, html: true).find_all(action, klass._prefixes, false).first ||
+        lookup(klass, html: false).find_all(action, klass._prefixes, false).first
     end
 
     def layout(klass)
@@ -22,11 +23,14 @@ module RailsVis
       template.virtual_path.delete_prefix("layouts/")
     end
 
-    # name: "shared/form" or "form" (relative to the directory of the rendering template).
+    # name: "shared/form" (that directory) or "form" (the rendering template's directory, then the controller's
+    # view prefixes, as Rails does).
     def partial(klass, name, from_virtual_path)
-      dir, base = name.include?("/") ? File.split(name) : [File.dirname(from_virtual_path), name]
-      lookup(klass, html: true).find_all(base, [dir], true).first ||
-        lookup(klass, html: false).find_all(base, [dir], true).first
+      dirs, base = if name.include?("/") then [[File.dirname(name)], File.basename(name)]
+                   else [[File.dirname(from_virtual_path), *klass._prefixes].uniq, name]
+                   end
+      lookup(klass, html: true).find_all(base, dirs, true).first ||
+        lookup(klass, html: false).find_all(base, dirs, true).first
     end
 
     # Ruby source of the template wrapped in a method; line numbers match the template's own.
