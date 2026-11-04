@@ -12,7 +12,7 @@ class AcceptanceTest < Minitest::Test
   SPEC = YAML.load_file(File.join(ROOT, "acceptance/targets.yml")).fetch(TARGET)
   REPORT = File.join(ROOT, "tmp/acceptance/#{TARGET}.report.json")
   DATA = File.join(ROOT, "tmp/acceptance", TARGET, SPEC["app_dir"], "doc/rails_vis/data.json")
-  COLLECTORS = %w[routes controllers models databases documents boot middleware entry_points gems].freeze
+  COLLECTORS = %w[routes controllers models databases documents boot middleware entry_points gems pages].freeze
 
   def report = @report ||= JSON.parse(File.read(REPORT, encoding: "UTF-8"))
   def text = @text ||= File.read(DATA, encoding: "UTF-8")
@@ -85,6 +85,16 @@ class AcceptanceTest < Minitest::Test
       assert File.file?(File.join(clone, path)), "#{node["name"]}: #{path} is not repo-relative"
       assert path.start_with?("app/"), "#{node["name"]}: #{path}" if node["name"].start_with?("Spina::")
     end
+  end
+
+  def test_spina_page_flow_floors
+    skip unless TARGET == "spina"
+    html_pages = data["pages"].select { |p| p["format"] == "html" }
+    assert_operator html_pages.size, :>=, 37
+    assert_operator html_pages.sum { |p| p["links"].size }, :>=, 20
+    assert_operator data["pages"].sum { |p| p["redirects"].size }, :>=, 16
+    assert data["layouts"].any? { |l| l["name"] == "spina/admin/application" }
+    assert html_pages.all? { |p| p["template"]["url"].to_s.match?(%r{\Ahttps://github\.com/.+#L1\z}) }
   end
 
   def test_lobsters

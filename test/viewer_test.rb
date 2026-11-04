@@ -28,6 +28,12 @@ class ViewerTest < Minitest::Test
     assert_match(/const FLOW_LIMIT = 60;/, File.read(File.join(ROOT, "viewer/src/app.js"), encoding: "UTF-8"))
   end
 
+  def test_flow_threshold_and_selection_in_source
+    js = File.read(File.join(ROOT, "viewer/src/app.js"), encoding: "UTF-8")
+    assert_match(/nodes\.size >= FLOW_LIMIT/, js)
+    assert_match(/history\.replaceState\(null, "", "#\/flow"/, js)
+  end
+
   private
 
   def run_build
