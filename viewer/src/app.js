@@ -21,6 +21,8 @@
   const warnings = list("warnings");
   const middleware = list("middleware");
   const gems = list("gems");
+  const pages = list("pages");
+  const layouts = list("layouts");
   const hash = (key) => DATA[key] && typeof DATA[key] === "object" && !Array.isArray(DATA[key]) ? DATA[key] : {};
   const boot = hash("boot");
   const entry = hash("entry_points");
@@ -30,6 +32,7 @@
   const NAV = [
     ["start", "Start here", "i-start", null],
     ["requests", "Request map", "i-route", routes.length],
+    ["flow", "Page flow", "i-flow", () => flowGraph().nodes.size],
     ["domain", "Domain model", "i-model", models.length],
     ["databases", "Databases", "i-db", databases.length],
     ["boot", "Boot", "i-boot", null],
@@ -738,12 +741,178 @@
     ];
   }
 
+  // ---------- page flow ----------
+
+  // At this many pages the diagram draws one group at a time.
+  const FLOW_LIMIT = 60;
+  let flowCache = null;
+
+  // A page's group: its controller's namespace (everything before the last ::), or (app) for top-level controllers.
+  const flowGroupOf = (name) => name.includes("::") ? name.slice(0, name.lastIndexOf("::")) : "(app)";
+  const engineOf = (key) => { const r = routes.find((x) => x.controller === key); return r ? r.engine || null : null; };
+  const flowHref = (node) => "#/flow/" + encodeURIComponent(node.group) + "/" + node.id;
+
+  // A link to the route it reaches: the named route by (engine, stem), then on that path the GET route for a link,
+  // or for a form the write route of its method (the first write route when the method is not set).
+  function flowRoute(link) {
+    const engine = link.engine || null;
+    const named = routes.find((r) => r.name === link.stem && (r.engine || null) === engine);
+    if (!named) return null;
+    const onPath = routes.filter((r) => r.path === named.path && (r.engine || null) === engine);
+    if (!link.form) return onPath.find((r) => r.verb === "GET") || null;
+    const writes = onPath.filter((r) => r.verb !== "GET");
+    return (link.method ? writes.find((r) => r.verb === link.method.toUpperCase()) : writes[0]) || null;
+  }
+
+  // Pages as nodes, links and form landings as edges, groups by namespace (largest first), layout links resolved.
+  function flowGraph() {
+    if (flowCache) return flowCache;
+    const nodes = new Map(), byRoute = new Map(), edges = [], seen = new Set();
+    let groups = new Map();
+    for (const page of pages) {
+      const key = routeKey(page.controller), engine = engineOf(key);
+      const ctrl = controllers.find((c) => c.name === page.controller);
+      const action = ctrl && (ctrl.actions || []).find((a) => a.name === page.action);
+      const inertia = !!(action && action.view && action.view.kind === "inertia");
+      if (page.format !== "html" && !inertia) continue;
+      const rs = routes.filter((r) => r.verb === "GET" && r.controller === key && r.action === page.action && (r.engine || null) === engine);
+      if (!rs.length) continue;
+      const group = flowGroupOf(page.controller);
+      const node = { id: ident(page.controller + "#" + page.action), controller: page.controller, action: page.action, group,
+        path: rs[0].path, verb: "GET", routes: rs, page, inertia, muted: false };
+      nodes.set(node.id, node);
+      rs.forEach((r) => byRoute.set(r, node));
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push(node);
+    }
+    groups = new Map([...groups].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])));
+    const add = (edge) => {
+      const k = edge.from + " " + edge.to + " " + edge.label;
+      if (!seen.has(k)) { seen.add(k); edges.push(edge); }
+    };
+    for (const node of nodes.values()) {
+      for (const link of node.page.links || []) {
+        const route = flowRoute(link);
+        if (!route) continue;
+        const base = { from: node.id, form: !!link.form, source: link.source };
+        if (!link.form) {
+          const to = byRoute.get(route);
+          if (to) add({ ...base, to: to.id, label: "", stub: null });
+          continue;
+        }
+        // A form lands where its target action redirects, when that is a page; otherwise it ends in a small action node.
+        const target = pages.find((p) => routeKey(p.controller) === route.controller && p.action === route.action);
+        const landings = (target ? target.redirects || [] : [])
+          .map((r) => byRoute.get(flowRoute({ stem: r.stem, engine: r.engine, form: false }))).filter(Boolean);
+        if (landings.length) landings.forEach((to) => add({ ...base, to: to.id, label: route.action, stub: null }));
+        else {
+          const ctrl = target ? target.controller : (controllers.find((c) => routeKey(c.name) === route.controller) || {}).name || route.controller;
+          add({ ...base, to: "stub_" + ident(ctrl + "#" + route.action), label: "", stub: { verb: route.verb, action: route.action } });
+        }
+      }
+    }
+    const nav = layouts.map((layout) => {
+      const once = new Set();
+      const links = (layout.links || []).map(flowRoute).filter((r) => r && !once.has(r) && once.add(r))
+        .map((route) => ({ route, node: byRoute.get(route) || null }));
+      return { layout, links };
+    });
+    flowCache = { nodes, edges, groups, nav };
+    return flowCache;
+  }
+
+  // Mermaid source: every group as a subgraph when group is null; else one subgraph per controller of that group,
+  // plus the pages outside it that it links to or is linked from, muted.
+  function flowSource(graph, group) {
+    const q = (s) => '"' + String(s).replace(/"/g, "#quot;") + '"';
+    const shape = (n) => n.id + (n.inertia ? "[[" + q(n.path) + "]]" : "[" + q(n.path) + "]");
+    const inGroup = (id) => group == null || (graph.nodes.has(id) && graph.nodes.get(id).group === group);
+    const lines = ["flowchart LR"], drawn = new Set();
+    const subgraph = (name, ns) => {
+      lines.push("  subgraph sg_" + ident(name) + "[" + q(name) + "]");
+      for (const n of ns) { lines.push("    " + shape(n)); drawn.add(n.id); }
+      lines.push("  end");
+    };
+    if (group == null) for (const [g, ns] of graph.groups) subgraph(g, ns);
+    else {
+      const byCtrl = new Map();
+      for (const n of graph.groups.get(group) || []) {
+        if (!byCtrl.has(n.controller)) byCtrl.set(n.controller, []);
+        byCtrl.get(n.controller).push(n);
+      }
+      for (const [c, ns] of byCtrl) subgraph(c, ns);
+      for (const e of graph.edges) {
+        const other = inGroup(e.from) ? e.to : inGroup(e.to) ? e.from : null;
+        const n = other && graph.nodes.get(other);
+        if (n && !drawn.has(n.id)) { lines.push("  " + shape(n), "  class " + n.id + " muted"); drawn.add(n.id); }
+      }
+    }
+    for (const e of graph.edges) {
+      if (!inGroup(e.from) && !inGroup(e.to)) continue;
+      if (e.stub && drawn.has(e.from) && !drawn.has(e.to)) { lines.push("  " + e.to + "([" + q(e.stub.verb + " " + e.stub.action) + "])"); drawn.add(e.to); }
+      if (!drawn.has(e.from) || !drawn.has(e.to)) continue;
+      lines.push("  " + e.from + (e.label ? " -->|" + q(e.label) + "| " : " --> ") + e.to);
+    }
+    return lines.join("\n");
+  }
+
+  function renderFlow(arg) {
+    const graph = flowGraph();
+    const [want, pageId] = String(arg || "").split("/");
+    state.flowPage = pageId && graph.nodes.has(pageId) ? pageId : null;
+    const out = [pageHeader("Page flow", "Every page a GET route reaches, and the links, forms and redirects between them. Layout links are listed above the diagram, not drawn.")];
+    if (!graph.nodes.size) {
+      return out.concat(h("div", { class: "empty-state" },
+        h("p", {}, "No pages. A page is a controller action a GET route reaches that renders an HTML template or an Inertia page; this app has none.")));
+    }
+    const drawn = graph.nodes.size >= FLOW_LIMIT ? (graph.groups.has(want) ? want : graph.groups.keys().next().value) : null;
+    out.push(h("nav", { class: "chips", "aria-label": "Page groups" }, [...graph.groups].map(([g, ns]) =>
+      h("a", { class: "chip", href: "#/flow/" + encodeURIComponent(g), "aria-current": g === drawn ? "page" : null },
+        icon("i-flow"), g, " ", h("span", { class: "num muted" }, ns.length)))));
+    if (graph.nav.length) {
+      out.push(h("div", { class: "flow-nav", role: "group", "aria-label": "Navigation" }, graph.nav.map(({ layout, links }) =>
+        h("div", {}, label("Navigation"), codeLink(layout.source, layout.name),
+          links.length ? links.map(({ route, node }) => node
+            ? h("a", { class: "chip", href: flowHref(node) }, h("code", {}, route.path), verbPill(route.verb))
+            : h("span", { class: "chip" }, h("code", {}, route.path), verbPill(route.verb)))
+            : muted("no links")))));
+    }
+    const block = mermaidBlock(flowSource(graph, drawn));
+    block.setAttribute("data-flow-group", drawn == null ? "*" : drawn);
+    out.push(block, h("div", { id: "flow-detail" }));
+    const fromNav = new Set(graph.nav.flatMap((n) => n.links.map((l) => l.node && l.node.id)));
+    const rows = [...graph.nodes.values()]
+      .filter((n) => matches(n.path, ...n.routes.map((r) => r.name), n.controller, n.page.template && n.page.template.path))
+      .sort((a, b) => a.path.localeCompare(b.path))
+      .map((n) => {
+        const linksOut = graph.edges.filter((e) => e.from === n.id && !e.stub).length;
+        const into = graph.edges.filter((e) => e.to === n.id);
+        const lands = [...new Set(into.filter((e) => e.label).map((e) => e.label))];
+        const warns = warnings.filter((w) => w.where === "pages" && w.message.startsWith(n.controller + "#" + n.action + ":")).length;
+        return h("tr", {},
+          h("td", {}, verbPill(n.verb), " ", h("a", { href: flowHref(n) }, h("code", {}, n.path)),
+            n.inertia ? [" ", h("span", { class: "tag tag--out" }, "page")] : null,
+            !into.length && !fromNav.has(n.id) ? [" ", h("span", { class: "tag tag--warn" }, "unreached")] : null),
+          h("td", {}, codeLink(n.page.template)),
+          h("td", { class: "num" }, linksOut),
+          h("td", { class: "num" }, into.length, !into.length && fromNav.has(n.id) ? [" ", h("span", { class: "tag tag--out" }, "from navigation")] : null),
+          h("td", {}, lands.length ? lands.join(", ") : muted("none")),
+          h("td", { class: "num" }, warns ? h("span", { class: "warn-text" }, icon("i-warn", "", warns + " warnings"), " " + warns) : ""));
+      });
+    out.push(rows.length
+      ? table(["Page", "Template", "Links out", "Linked from", "Lands here after", "Warnings"], rows, "flow-ledger")
+      : emptyState("pages", pages.length));
+    return out;
+  }
+
   // ---------- chrome: nav, footer, banner ----------
 
   function renderNav(active) {
-    document.getElementById("nav").replaceChildren(...NAV.map(([id, text, ic, count]) =>
-      h("li", {}, h("a", { href: "#/" + id, "aria-current": active === id ? "page" : null }, icon(ic), text,
-        count == null ? null : h("span", { class: "count" }, count)))));
+    document.getElementById("nav").replaceChildren(...NAV.map(([id, text, ic, count]) => {
+      const n = typeof count === "function" ? count() : count;
+      return h("li", {}, h("a", { href: "#/" + id, "aria-current": active === id ? "page" : null }, icon(ic), text,
+        n == null ? null : h("span", { class: "count" }, n)));
+    }));
   }
 
   function renderFooter() {
@@ -785,6 +954,7 @@
     let nodes, active = view;
     switch (view) {
       case "requests": nodes = renderRequests(arg); break;
+      case "flow": nodes = renderFlow(arg); break;
       case "domain": nodes = renderDomain(arg); break;
       case "databases": nodes = renderDatabases(); break;
       case "boot": nodes = renderBoot(); break;

@@ -109,6 +109,14 @@ a.ext .icon { width: 12px; height: 12px; color: var(--color-muted); }
 .chip:active { background: var(--color-paper-3); }
 .chip .icon { color: var(--color-model); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin: 0 0 var(--space-lg); }
+.flow-nav { margin: 0 0 var(--space-lg); border-block: var(--rule-hair) solid var(--color-rule); }
+.flow-nav > div { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); padding: var(--space-xs) 0; }
+.flow-nav > div + div { border-top: var(--rule-hair) solid var(--color-rule); }
+.flow-nav .label { margin: 0; }
+.flow-nav .chip .verb { margin-left: var(--space-2xs); }
+/* #main outranks Mermaid's own #mermaid-<n> .node rules */
+#main .diagram .node.muted rect, #main .diagram .node.muted polygon { fill: var(--color-paper-2); stroke: var(--color-rule); }
+#main .diagram .node.muted .nodeLabel { color: var(--color-muted); }
 
 /* ---------- tables: an ink rule on top, hairlines between rows ---------- */
 .table-wrap { overflow-x: auto; }

@@ -24,6 +24,10 @@ class ViewerTest < Minitest::Test
     assert_equal first, File.binread(VIEWER)
   end
 
+  def test_flow_limit_is_a_constant
+    assert_match(/const FLOW_LIMIT = 60;/, File.read(File.join(ROOT, "viewer/src/app.js"), encoding: "UTF-8"))
+  end
+
   private
 
   def run_build

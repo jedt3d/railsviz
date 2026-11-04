@@ -111,6 +111,13 @@ class DumpTest < Minitest::Test
     self.class.reset!
   end
 
+  def test_viewer_has_page_flow
+    assert_includes html, '"flow", "Page flow", "i-flow"'
+    assert_includes html, 'id="i-flow"'
+    assert_includes html, "flowchart LR"
+    assert data["pages"].any? { |p| p["controller"] == "PatientsController" && p["action"] == "index" }
+  end
+
   def test_rake_task_defined_by_railtie
     self.class.load_tasks
     assert Rake::Task.task_defined?("rails_vis:dump")
